@@ -709,11 +709,43 @@ function setupPhoneMask() {
     phoneInput.value = phoneInput.value.replace(/[^0-9]/g, "").slice(0, 11);
   });
 }
+async function requireCustomerLogin() {
+  if (!window.supabaseClient) {
+    window.location.href = "login.html";
+    return false;
+  }
 
-document.addEventListener("DOMContentLoaded", () => {
+  try {
+    const { data, error } =
+      await window.supabaseClient.auth.getSession();
+
+    if (error || !data?.session?.user) {
+      alert("يجب تسجيل الدخول أولًا لإتمام الطلب.");
+      window.location.href = "login.html";
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Session check error:", error);
+    window.location.href = "login.html";
+    return false;
+  }
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  const isLoggedIn = await requireCustomerLogin();
+
+  if (!isLoggedIn) {
+    return;
+  }
+
   if (cartQuantity() === 0) {
     showToast("سلتك فارغة، الرجاء إضافة منتجات أولاً", "error");
-    setTimeout(() => (window.location.href = "cart.html"), 1200);
+    setTimeout(() => {
+      window.location.href = "cart.html";
+    }, 1200);
+    return;
   }
 
   renderCheckoutSummary();
@@ -725,9 +757,16 @@ document.addEventListener("DOMContentLoaded", () => {
   updatePaymentAmounts();
   prefillFromCustomerSession();
 
-  document.getElementById("checkoutForm").addEventListener("submit", submitOrder);
-});
+  const checkoutForm =
+    document.getElementById("checkoutForm");
 
+  if (checkoutForm) {
+    checkoutForm.addEventListener(
+      "submit",
+      submitOrder
+    );
+  }
+});
 async function prefillFromCustomerSession() {
   if (!window.supabaseClient) return;
   try {
