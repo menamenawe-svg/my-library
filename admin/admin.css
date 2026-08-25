@@ -294,3 +294,6 @@
   .order-card-footer { flex-direction: column; align-items: stretch; }
   .order-status-controls { justify-content: space-between; }
 }
+.admin-login-message {
+  display: none;
+}
