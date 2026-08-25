@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>سلة التسوق | متجر أم أم كي</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="promo-bar">
+  <div class="promo-track">
+    <span>🚚 توصيل لكل محافظات مصر</span>
+    <span>🎁 عروض وخصومات أسبوعية</span>
+    <span>🔒 دفع آمن 100%</span>
+    <span>⭐ خدمة عملاء متميزة</span>
+    <span>🚚 توصيل لكل محافظات مصر</span>
+    <span>🎁 عروض وخصومات أسبوعية</span>
+    <span>🔒 دفع آمن 100%</span>
+    <span>⭐ خدمة عملاء متميزة</span>
+  </div>
+</div>
+
+<header class="navbar">
+  <div class="container">
+    <a href="index.html" class="logo" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
+      <img src="Gemini_Generated_Image_etkmgqetkmgqetkm (1).jpg" alt="" style="height: 45px; width: auto; object-fit: contain; border-radius: 6px;">
+      <span>متجر <strong>أم أم كي</strong></span>
+    </a>
+    <nav class="nav-links">
+      <a href="index.html">الرئيسية</a>
+      <a href="index.html#categories">الأقسام</a>
+      <a href="index.html#products">المنتجات</a>
+      <a href="cart.html" class="active">السلة</a>
+    </nav>
+    <div class="nav-actions">
+      <a href="login.html" class="account-link" id="accountLink">👤 تسجيل الدخول</a>
+      <a href="cart.html" class="cart-link" aria-label="السلة">
+        🛒
+        <span class="cart-badge" id="cartCount">0</span>
+      </a>
+      <button class="nav-toggle" id="navToggle" aria-label="القائمة">☰</button>
+    </div>
+  </div>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="index.html">الرئيسية</a>
+    <a href="index.html#categories">الأقسام</a>
+    <a href="index.html#products">المنتجات</a>
+    <a href="cart.html">السلة</a>
+  </div>
+</header>
+
+<section class="page-header">
+  <div class="floating-shapes"><span></span><span></span><span></span></div>
+  <div class="container">
+    <div class="breadcrumb">
+      <a href="index.html">الرئيسية</a>
+      <span class="sep">/</span>
+      <span class="current">سلة التسوق</span>
+    </div>
+    <h1 class="page-title">سلة التسوق <span class="muted" id="summaryQuantityLabel"></span></h1>
+  </div>
+</section>
+
+<section class="page-body">
+  <div class="container">
+    <div class="cart-layout">
+
+      <div>
+        <div class="cart-card">
+          <div id="cartItems"></div>
+        </div>
+
+        <div class="cart-actions-row">
+          <button class="btn btn-ghost" onclick="continueShopping()">← مواصلة التسوق</button>
+          <button class="btn btn-danger" onclick="clearCart()">تفريغ السلة</button>
+        </div>
+
+        <div id="emptyCart" class="empty-state u-empty-cart-box u-hidden">
+          <div class="u-empty-cart-icon">🛒</div>
+          <h3 class="u-empty-cart-title">سلتك فارغة</h3>
+          <p class="u-empty-cart-text">لم تقم بإضافة أي منتجات بعد</p>
+          <a href="index.html#products" class="btn btn-primary">تصفح المنتجات</a>
+        </div>
+      </div>
+
+      <aside class="summary-card">
+        <h3>ملخص الطلب</h3>
+        <div class="summary-row">
+          <span>عدد المنتجات</span>
+          <span id="summaryQuantity">0</span>
+        </div>
+        <div class="summary-row">
+          <span>قيمة المنتجات</span>
+          <span id="subtotal">0 ج.م</span>
+        </div>
+        <div class="summary-row">
+          <span>الشحن</span>
+          <span>يُحسب عند إتمام الطلب</span>
+        </div>
+        <div class="summary-row total">
+          <span>الإجمالي</span>
+          <span id="total">0 ج.م</span>
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" onclick="goToCheckout()">إتمام الطلب</button>
+      </aside>
+
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-bottom">&copy; <span id="footerYear"></span> متجر أم أم كي. جميع الحقوق محفوظة.</div>
+  </div>
+</footer>
+
+<div id="toastContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="script.js"></script>
+<script>
+  document.getElementById("footerYear").textContent = new Date().getFullYear();
+  document.getElementById("navToggle").addEventListener("click", () => {
+    document.getElementById("mobileMenu").classList.toggle("open");
+  });
+  updateAccountLink();
+</script>
+</body>
+</html>

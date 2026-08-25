@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>لوحة التحكم | مكتبة مينا</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+<link rel="stylesheet" href="admin.css" />
+</head>
+<body class="admin-body">
+
+<header class="admin-navbar">
+  <div class="admin-navbar-inner">
+    <div class="admin-logo">📚 لوحة تحكم <span>مكتبة مينا</span></div>
+    <button class="btn btn-ghost" id="logoutButton">🚪 تسجيل الخروج</button>
+  </div>
+</header>
+
+<div class="admin-container">
+
+  <div class="admin-tabs">
+    <button class="admin-tab active" data-tab="products">📦 المنتجات</button>
+    <button class="admin-tab" data-tab="orders">🧾 الطلبات</button>
+  </div>
+
+  <div id="adminMessage" class="status-box success" style="display:none;"></div>
+
+  <!-- Products Tab -->
+  <section id="tabProducts" class="admin-tab-panel">
+    <div class="admin-panel-header">
+      <h2>إدارة المنتجات</h2>
+      <button class="btn btn-primary" id="addProductButton">+ إضافة منتج</button>
+    </div>
+
+    <div id="adminProducts" class="admin-products-grid">
+      <div class="page-loading">جاري تحميل المنتجات...</div>
+    </div>
+  </section>
+
+  <!-- Orders Tab -->
+  <section id="tabOrders" class="admin-tab-panel" style="display:none;">
+    <div class="admin-panel-header">
+      <h2>إدارة الطلبات</h2>
+    </div>
+
+    <div id="adminOrders" class="admin-orders-list">
+      <div class="page-loading">جاري تحميل الطلبات...</div>
+    </div>
+  </section>
+
+</div>
+
+<!-- Product Form Modal -->
+<div id="productFormBox" class="modal-overlay" style="display:none;">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 id="productFormTitle">إضافة منتج جديد</h3>
+      <button type="button" class="modal-close" id="productFormClose">✕</button>
+    </div>
+
+    <form id="productForm" class="modal-body">
+      <input type="hidden" id="productId">
+
+      <div class="form-row">
+        <label>اسم المنتج <span class="req">*</span></label>
+        <input type="text" id="productName" required>
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-row">
+          <label>السعر (ج.م) <span class="req">*</span></label>
+          <input type="number" id="productPrice" min="0" step="0.01" required>
+        </div>
+        <div class="form-row">
+          <label>الكمية المتاحة</label>
+          <input type="number" id="productStock" min="0" step="1">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>القسم <span class="req">*</span></label>
+        <select id="productCategory" required>
+          <option value="إكسسوارات">إكسسوارات</option>
+          <option value="أدوات منزلية">أدوات منزلية</option>
+          <option value="أدوات مدرسية">أدوات مدرسية</option>
+          <option value="ملابس">ملابس</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label>الوصف</label>
+        <textarea id="productDescription" rows="3"></textarea>
+      </div>
+
+      <div class="form-row">
+        <label>رابط صورة المنتج</label>
+        <input type="text" id="productImageUrl" placeholder="https://...">
+      </div>
+
+      <div class="form-row">
+        <label>أو ارفع صورة</label>
+        <input type="file" id="productImage" accept="image/*">
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" id="cancelProductButton">إلغاء</button>
+        <button type="submit" class="btn btn-primary" id="saveProductButton">حفظ المنتج</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../supabase.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>
