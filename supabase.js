@@ -1,84 +1,140 @@
+
 /* =========================================================
-   supabase.js — عميل Supabase المشترك لمكتبة مينا
+   supabase.js — عميل Supabase المشترك لمتجر MMK
    ========================================================= */
 
 (function initSupabaseClient() {
+
   const SUPABASE_URL =
     "https://fmporjxfmjacqpppzgbs.supabase.co";
 
   const SUPABASE_ANON_KEY =
     "sb_publishable_f9EeMqMWY5NulG-9Oma3mQ_3xh6SHJj";
 
+  /* -----------------------------------------
+     منع إنشاء Client أكثر من مرة
+  ----------------------------------------- */
+
   if (window.supabaseClient) {
     return;
   }
 
-  if (typeof window.supabase === "undefined") {
+  /* -----------------------------------------
+     التأكد من تحميل مكتبة Supabase
+  ----------------------------------------- */
+
+  if (
+    typeof window.supabase === "undefined" ||
+    typeof window.supabase.createClient !== "function"
+  ) {
     console.error(
-      "لم يتم تحميل مكتبة Supabase. تأكد من تحميل @supabase/supabase-js قبل supabase.js."
+      "❌ مكتبة Supabase غير محملة. تأكد من تحميل @supabase/supabase-js قبل supabase.js."
     );
+
     return;
   }
 
-  window.supabaseClient = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_ANON_KEY,
-    {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-        storage: window.localStorage,
-      },
-    }
-  );
+  /* -----------------------------------------
+     إنشاء Supabase Client
+  ----------------------------------------- */
 
-  window.MENA_CONFIG = {
-    ORDERS_TABLE: "orders",
-    PRODUCTS_TABLE: "products",
-    RECEIPTS_BUCKET: "payment-receipts",
-    PRODUCT_IMAGES_BUCKET: "product-images",
-    CART_KEY: "libraryCart",
-    LAST_ORDER_ID_KEY: "lastOrderId",
-    LAST_ORDER_NUMBER_KEY: "lastOrderNumber",
-  };
+  try {
 
-  console.log("✅ تم الاتصال بـ Supabase بنجاح");
+    window.supabaseClient =
+      window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY,
+        {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true,
+            storage: window.localStorage
+          }
+        }
+      );
+
+    /* -----------------------------------------
+       إعدادات المشروع
+    ----------------------------------------- */
+
+    window.MENA_CONFIG = {
+
+      ORDERS_TABLE:
+        "orders",
+
+      PRODUCTS_TABLE:
+        "products",
+
+      RECEIPTS_BUCKET:
+        "payment-receipts",
+
+      PRODUCT_IMAGES_BUCKET:
+        "product-images",
+
+      CART_KEY:
+        "libraryCart",
+
+      LAST_ORDER_ID_KEY:
+        "lastOrderId",
+
+      LAST_ORDER_NUMBER_KEY:
+        "lastOrderNumber"
+    };
+
+    /* -----------------------------------------
+       دعم الاسم الجديد أيضًا
+    ----------------------------------------- */
+
+    window.MMK_CONFIG =
+      window.MENA_CONFIG;
+
+    console.log(
+      "✅ تم الاتصال بـ Supabase بنجاح"
+    );
+
+  } catch (error) {
+
+    console.error(
+      "❌ فشل إنشاء Supabase Client:",
+      error
+    );
+
+  }
+
 })();
 
+
 /* =========================================================
-   دوال مساعدة
+   توليد رقم طلب
    ========================================================= */
 
-function escapeHTML(str) {
-  if (str === null || str === undefined) return "";
+function generateOrderNumber() {
 
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+  const now =
+    new Date();
 
-function formatPrice(value) {
-  const num = Number(value) || 0;
+  const y =
+    now.getFullYear();
+
+  const m =
+    String(
+      now.getMonth() + 1
+    ).padStart(2, "0");
+
+  const d =
+    String(
+      now.getDate()
+    ).padStart(2, "0");
+
+  const random =
+    Math.floor(
+      100000 +
+      Math.random() * 900000
+    );
 
   return (
-    num.toLocaleString("ar-EG", {
-      maximumFractionDigits: 2,
-    }) + " ج.م"
+    `MN-${y}${m}${d}-${random}`
   );
 }
 
-function generateOrderNumber() {
-  const now = new Date();
-
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-
-  const rand = Math.floor(100000 + Math.random() * 900000);
-
-  return `MN-${y}${m}${d}-${rand}`;
-}
