@@ -1,21 +1,51 @@
 /* =========================================================
    script.js — MMK Store
-   المنتجات والسلة والبحث والفلترة والحساب
+   المنتجات + السلة + البحث + الأقسام + الحساب
+   ========================================================= */
+
+/* =========================================================
+   CART CONFIG
    ========================================================= */
 
 const CART_KEY =
-  (window.MENA_CONFIG && window.MENA_CONFIG.CART_KEY) ||
+  (window.MENA_CONFIG &&
+    window.MENA_CONFIG.CART_KEY) ||
   "libraryCart";
+
+const DEFAULT_PRODUCT_IMAGE =
+  "data:image/svg+xml;charset=UTF-8," +
+  encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg"
+         width="600"
+         height="600"
+         viewBox="0 0 600 600">
+      <rect width="600" height="600" fill="#f6f7fc"/>
+      <text x="50%"
+            y="50%"
+            dominant-baseline="middle"
+            text-anchor="middle"
+            fill="#64748b"
+            font-family="Arial"
+            font-size="28">
+        MMK
+      </text>
+    </svg>
+  `);
 
 let ALL_PRODUCTS = [];
 let CURRENT_CATEGORY = "all";
 
 /* =========================================================
-   Helper Functions
+   HELPER FUNCTIONS
    ========================================================= */
 
 function escapeHTML(str) {
-  if (str === null || str === undefined) return "";
+  if (
+    str === null ||
+    str === undefined
+  ) {
+    return "";
+  }
 
   return String(str)
     .replace(/&/g, "&amp;")
@@ -27,126 +57,209 @@ function escapeHTML(str) {
 
 function formatPrice(price) {
   return (
-    Number(price || 0).toLocaleString("ar-EG") +
-    " ج.م"
+    Number(price || 0).toLocaleString(
+      "ar-EG"
+    ) + " ج.م"
   );
 }
 
 /* =========================================================
    توحيد أسماء الأقسام
-   مهم لربط المنتجات القديمة والجديدة
+   يدعم البيانات القديمة والجديدة
    ========================================================= */
 
 function normalizeProductCategory(category) {
-  if (!category) return "";
+  if (
+    category === null ||
+    category === undefined
+  ) {
+    return "";
+  }
 
   const value = String(category)
     .trim()
     .toLowerCase();
 
   const aliases = {
-    /* كابلات */
+
+    /* -------------------------
+       كابلات
+    ------------------------- */
+
+    "cables": "cables",
     "كابلات": "cables",
     "كابل": "cables",
-    "cables": "cables",
 
-    /* شواحن */
+    /* -------------------------
+       شواحن
+    ------------------------- */
+
+    "chargers": "chargers",
     "شواحن": "chargers",
     "شاحن": "chargers",
-    "chargers": "chargers",
 
-    /* هيدفون */
-    "هيدفون": "headphones",
+    /* -------------------------
+       هيدفون
+    ------------------------- */
+
     "headphones": "headphones",
+    "هيدفون": "headphones",
+    "headphone": "headphones",
 
-    /* هاند فري */
-    "هاند فري": "handsfree",
-    "هاندفري": "handsfree",
+    /* -------------------------
+       هاند فري
+    ------------------------- */
+
     "handsfree": "handsfree",
     "hands-free": "handsfree",
     "hands_free": "handsfree",
+    "هاند فري": "handsfree",
+    "هاندفري": "handsfree",
 
-    /* أدوات مدرسية */
+    /* -------------------------
+       أدوات مدرسية
+    ------------------------- */
+
+    "school": "school",
     "أدوات مدرسية": "school",
     "ادوات مدرسية": "school",
-    "school": "school",
 
-    /* إكسسوارات هواتف */
-    "إكسسوارات هواتف": "phone-accessories",
-    "اكسسوارات هواتف": "phone-accessories",
-    "إكسسوارات الهاتف": "phone-accessories",
-    "اكسسوارات الهاتف": "phone-accessories",
-    "phone-accessories": "phone-accessories",
-    "phone_accessories": "phone-accessories",
+    /* -------------------------
+       إكسسوارات هواتف
+    ------------------------- */
 
-    /* ملابس */
-    "ملابس": "clothes",
+    "phone-accessories":
+      "phone-accessories",
+
+    "phone_accessories":
+      "phone-accessories",
+
+    "phoneaccessories":
+      "phone-accessories",
+
+    "إكسسوارات هواتف":
+      "phone-accessories",
+
+    "اكسسوارات هواتف":
+      "phone-accessories",
+
+    "إكسسوارات الهاتف":
+      "phone-accessories",
+
+    "اكسسوارات الهاتف":
+      "phone-accessories",
+
+    /* -------------------------
+       ملابس
+    ------------------------- */
+
     "clothes": "clothes",
+    "ملابس": "clothes",
 
-    /* أدوات منزلية */
+    /* -------------------------
+       أدوات منزلية
+    ------------------------- */
+
+    "home": "home",
     "أدوات منزلية": "home",
     "ادوات منزلية": "home",
-    "home": "home",
 
-    /* إكسسوارات */
+    /* -------------------------
+       إكسسوارات
+    ------------------------- */
+
+    "accessories": "accessories",
     "إكسسوارات": "accessories",
     "اكسسوارات": "accessories",
-    "accessories": "accessories",
 
-    /* أيربودز */
+    /* -------------------------
+       أيربودز
+    ------------------------- */
+
+    "airpods": "airpods",
+    "air-pods": "airpods",
     "أيربودز": "airpods",
     "ايربودز": "airpods",
-    "airpods": "airpods",
 
-    /* كل المنتجات */
-    "كل المنتجات": "all",
+    /* -------------------------
+       كل المنتجات
+    ------------------------- */
+
     "all": "all",
+    "كل المنتجات": "all"
   };
 
-  return aliases[value] || value;
+  return (
+    aliases[value] ||
+    value
+  );
 }
 
 /* =========================================================
-   أسماء الأقسام بالعربي للعرض
+   اسم القسم المعروض بالعربي
    ========================================================= */
 
 function getCategoryDisplayName(category) {
+
   const normalized =
-    normalizeProductCategory(category);
+    normalizeProductCategory(
+      category
+    );
 
   const names = {
+
     cables: "كابلات",
+
     chargers: "شواحن",
+
     headphones: "هيدفون",
+
     handsfree: "هاند فري",
+
     school: "أدوات مدرسية",
-    "phone-accessories": "إكسسوارات هواتف",
+
+    "phone-accessories":
+      "إكسسوارات هواتف",
+
     clothes: "ملابس",
+
     home: "أدوات منزلية",
+
     accessories: "إكسسوارات",
-    airpods: "أيربودز",
+
+    airpods: "أيربودز"
   };
 
-  return names[normalized] ||
-    (category ? String(category) : "عام");
+  return (
+    names[normalized] ||
+    (
+      category
+        ? String(category)
+        : "عام"
+    )
+  );
 }
 
 /* =========================================================
-   Toast Notifications
+   TOAST
    ========================================================= */
 
 function showToast(
   message,
   type = "success"
 ) {
+
   let container =
     document.getElementById(
       "toastContainer"
     );
 
   if (!container) {
+
     container =
-      document.createElement("div");
+      document.createElement(
+        "div"
+      );
 
     container.id =
       "toastContainer";
@@ -157,7 +270,9 @@ function showToast(
   }
 
   const toast =
-    document.createElement("div");
+    document.createElement(
+      "div"
+    );
 
   toast.className =
     `toast ${type}`;
@@ -171,15 +286,23 @@ function showToast(
 
   toast.innerHTML = `
     <span>${icon}</span>
-    <span>${escapeHTML(message)}</span>
+    <span>${escapeHTML(
+      message
+    )}</span>
   `;
 
-  container.appendChild(toast);
+  container.appendChild(
+    toast
+  );
 
   setTimeout(() => {
-    toast.style.opacity = "0";
+
+    toast.style.opacity =
+      "0";
+
     toast.style.transform =
       "translateY(10px)";
+
     toast.style.transition =
       "all .25s ease";
 
@@ -187,17 +310,20 @@ function showToast(
       () => toast.remove(),
       250
     );
+
   }, 2600);
 }
 
 /* =========================================================
-   Cart Storage
+   CART STORAGE
    ========================================================= */
 
 function getCart() {
+
   let cart = [];
 
   try {
+
     const raw =
       localStorage.getItem(
         CART_KEY
@@ -211,7 +337,13 @@ function getCart() {
       cart = [];
     }
 
-  } catch (e) {
+  } catch (error) {
+
+    console.error(
+      "تعذر قراءة السلة:",
+      error
+    );
+
     cart = [];
   }
 
@@ -222,38 +354,53 @@ function getCart() {
         item.id !== undefined &&
         item.id !== null
     )
-    .map((item) => ({
-      id: String(item.id),
-      name:
-        item.name ||
-        "منتج بدون اسم",
-      price:
-        Number(item.price) || 0,
-      image:
-        item.image ||
-        item.image_url ||
-        item.imageUrl ||
-        "",
-      quantity: Math.max(
-        1,
-        parseInt(
-          item.quantity,
-          10
-        ) || 1
-      ),
-    }));
+    .map(
+      (item) => ({
+        id: String(
+          item.id
+        ),
+
+        name:
+          item.name ||
+          "منتج بدون اسم",
+
+        price:
+          Number(
+            item.price
+          ) || 0,
+
+        image:
+          item.image ||
+          item.image_url ||
+          item.imageUrl ||
+          "",
+
+        quantity:
+          Math.max(
+            1,
+            parseInt(
+              item.quantity,
+              10
+            ) || 1
+          )
+      })
+    );
 }
 
 function saveCart(cart) {
+
   try {
+
     localStorage.setItem(
       CART_KEY,
       JSON.stringify(cart)
     );
-  } catch (e) {
+
+  } catch (error) {
+
     console.error(
       "تعذر حفظ السلة:",
-      e
+      error
     );
   }
 
@@ -261,16 +408,25 @@ function saveCart(cart) {
 }
 
 function cartQuantity() {
+
   return getCart().reduce(
-    (sum, item) =>
-      sum + item.quantity,
+    (
+      sum,
+      item
+    ) =>
+      sum +
+      item.quantity,
     0
   );
 }
 
 function cartTotal() {
+
   return getCart().reduce(
-    (sum, item) =>
+    (
+      sum,
+      item
+    ) =>
       sum +
       item.price *
         item.quantity,
@@ -279,6 +435,7 @@ function cartTotal() {
 }
 
 function updateCartCount() {
+
   const count =
     cartQuantity();
 
@@ -286,24 +443,33 @@ function updateCartCount() {
     .querySelectorAll(
       "#cartCount, .cart-badge"
     )
-    .forEach((el) => {
-      el.textContent = count;
-      el.style.display = "flex";
-    });
+    .forEach(
+      (el) => {
+
+        el.textContent =
+          count;
+
+        el.style.display =
+          "flex";
+      }
+    );
 }
 
 /* =========================================================
-   Cart Mutation
+   CART MUTATIONS
    ========================================================= */
 
 function addToCart(
   product,
   quantity = 1
 ) {
+
   if (
     !product ||
-    product.id === undefined ||
-    product.id === null
+    product.id ===
+      undefined ||
+    product.id ===
+      null
   ) {
     return;
   }
@@ -312,7 +478,9 @@ function addToCart(
     getCart();
 
   const id =
-    String(product.id);
+    String(
+      product.id
+    );
 
   const existing =
     cart.find(
@@ -332,29 +500,38 @@ function addToCart(
     "منتج";
 
   const price =
-    Number(product.price) || 0;
+    Number(
+      product.price
+    ) || 0;
+
+  const safeQuantity =
+    Math.max(
+      1,
+      Number(
+        quantity
+      ) || 1
+    );
 
   if (existing) {
+
     existing.quantity +=
-      Math.max(
-        1,
-        Number(quantity) || 1
-      );
+      safeQuantity;
+
   } else {
+
     cart.push({
       id,
       name,
       price,
       image,
       quantity:
-        Math.max(
-          1,
-          Number(quantity) || 1
-        ),
+        safeQuantity
     });
   }
 
-  saveCart(cart);
+  saveCart(
+    cart
+  );
 
   showToast(
     `تمت إضافة "${name}" إلى السلة`,
@@ -368,6 +545,7 @@ function addToCartById(
   productId,
   quantity = 1
 ) {
+
   const product =
     ALL_PRODUCTS.find(
       (p) =>
@@ -376,10 +554,12 @@ function addToCartById(
     );
 
   if (!product) {
+
     showToast(
       "تعذر العثور على المنتج",
       "error"
     );
+
     return;
   }
 
@@ -389,7 +569,10 @@ function addToCartById(
   );
 }
 
-function buyNow(productId) {
+function buyNow(
+  productId
+) {
+
   addToCartById(
     productId,
     1
@@ -404,6 +587,7 @@ function buyNow(productId) {
 function removeFromCart(
   productId
 ) {
+
   let cart =
     getCart();
 
@@ -414,7 +598,10 @@ function removeFromCart(
         String(productId)
     );
 
-  saveCart(cart);
+  saveCart(
+    cart
+  );
+
   renderCartIfPresent();
 
   showToast(
@@ -427,6 +614,7 @@ function changeQuantity(
   productId,
   delta
 ) {
+
   const cart =
     getCart();
 
@@ -437,19 +625,29 @@ function changeQuantity(
         String(productId)
     );
 
-  if (!item) return;
+  if (!item) {
+    return;
+  }
 
   item.quantity +=
     Number(delta) || 0;
 
-  if (item.quantity <= 0) {
+  if (
+    item.quantity <=
+    0
+  ) {
+
     removeFromCart(
       productId
     );
+
     return;
   }
 
-  saveCart(cart);
+  saveCart(
+    cart
+  );
+
   renderCartIfPresent();
 }
 
@@ -457,6 +655,7 @@ function setQuantity(
   productId,
   value
 ) {
+
   const cart =
     getCart();
 
@@ -467,9 +666,11 @@ function setQuantity(
         String(productId)
     );
 
-  if (!item) return;
+  if (!item) {
+    return;
+  }
 
-  const qty =
+  item.quantity =
     Math.max(
       1,
       parseInt(
@@ -478,18 +679,21 @@ function setQuantity(
       ) || 1
     );
 
-  item.quantity = qty;
+  saveCart(
+    cart
+  );
 
-  saveCart(cart);
   renderCartIfPresent();
 }
 
 function clearCart() {
+
   localStorage.removeItem(
     CART_KEY
   );
 
   updateCartCount();
+
   renderCartIfPresent();
 
   showToast(
@@ -499,14 +703,17 @@ function clearCart() {
 }
 
 function goToCheckout() {
+
   if (
     cartQuantity() ===
     0
   ) {
+
     showToast(
       "السلة فارغة، أضف منتجات أولاً",
       "error"
     );
+
     return;
   }
 
@@ -519,15 +726,17 @@ function goCheckout() {
 }
 
 function continueShopping() {
+
   window.location.href =
     "index.html#products";
 }
 
 /* =========================================================
-   Cart Rendering
+   CART RENDERING
    ========================================================= */
 
 function renderCartIfPresent() {
+
   if (
     document.getElementById(
       "cartItems"
@@ -540,6 +749,7 @@ function renderCartIfPresent() {
 }
 
 function renderCart() {
+
   const cart =
     getCart();
 
@@ -566,6 +776,7 @@ function renderCart() {
     cart.length ===
     0
   ) {
+
     cartItemsEl.innerHTML =
       "";
 
@@ -580,6 +791,7 @@ function renderCart() {
     }
 
     updateCartSummary();
+
     return;
   }
 
@@ -595,140 +807,151 @@ function renderCart() {
 
   cartItemsEl.innerHTML =
     cart
-      .map((item) => {
-        const lineTotal =
-          item.price *
-          item.quantity;
+      .map(
+        (item) => {
 
-        return `
-          <div
-            class="cart-item"
-            data-id="${escapeHTML(
-              item.id
-            )}"
-          >
+          const lineTotal =
+            item.price *
+            item.quantity;
 
-            <img
-              class="cart-item-image"
-              src="${
-                escapeHTML(
-                  item.image
-                ) ||
-                "https://via.placeholder.com/150"
-              }"
-              alt="${escapeHTML(
-                item.name
+          const itemImage =
+            item.image ||
+            DEFAULT_PRODUCT_IMAGE;
+
+          return `
+            <div
+              class="cart-item"
+              data-id="${escapeHTML(
+                item.id
               )}"
-              onerror="
-                this.src='https://via.placeholder.com/150'
-              "
             >
 
-            <div class="cart-item-info">
-
-              <h3>
-                ${escapeHTML(
+              <img
+                class="cart-item-image"
+                src="${escapeHTML(
+                  itemImage
+                )}"
+                alt="${escapeHTML(
                   item.name
-                )}
-              </h3>
-
-              <div class="unit-price">
-                سعر الوحدة:
-                ${formatPrice(
-                  item.price
-                )}
-              </div>
-
-              <div class="qty-control">
-
-                <button
-                  type="button"
-                  onclick="
-                    changeQuantity(
-                      '${escapeHTML(
-                        item.id
-                      )}',
-                      -1
-                    )
-                  "
-                  aria-label="تقليل الكمية"
-                >
-                  −
-                </button>
-
-                <input
-                  type="number"
-                  min="1"
-                  value="${item.quantity}"
-                  onchange="
-                    setQuantity(
-                      '${escapeHTML(
-                        item.id
-                      )}',
-                      this.value
-                    )
-                  "
-                  aria-label="كمية المنتج"
-                >
-
-                <button
-                  type="button"
-                  onclick="
-                    changeQuantity(
-                      '${escapeHTML(
-                        item.id
-                      )}',
-                      1
-                    )
-                  "
-                  aria-label="زيادة الكمية"
-                >
-                  +
-                </button>
-
-              </div>
-            </div>
-
-            <div class="cart-item-side">
-
-              <div class="item-total">
-                ${formatPrice(
-                  lineTotal
-                )}
-              </div>
-
-              <button
-                type="button"
-                class="remove-link"
-                onclick="
-                  removeFromCart(
-                    '${escapeHTML(
-                      item.id
-                    )}'
-                  )
+                )}"
+                onerror="
+                  this.onerror=null;
+                  this.src='${DEFAULT_PRODUCT_IMAGE}';
                 "
               >
-                🗑 حذف
-              </button>
+
+              <div class="cart-item-info">
+
+                <h3>
+                  ${escapeHTML(
+                    item.name
+                  )}
+                </h3>
+
+                <div class="unit-price">
+                  سعر الوحدة:
+                  ${formatPrice(
+                    item.price
+                  )}
+                </div>
+
+                <div class="qty-control">
+
+                  <button
+                    type="button"
+                    onclick="
+                      changeQuantity(
+                        '${escapeHTML(
+                          item.id
+                        )}',
+                        -1
+                      )
+                    "
+                    aria-label="تقليل الكمية"
+                  >
+                    −
+                  </button>
+
+                  <input
+                    type="number"
+                    min="1"
+                    value="${item.quantity}"
+                    onchange="
+                      setQuantity(
+                        '${escapeHTML(
+                          item.id
+                        )}',
+                        this.value
+                      )
+                    "
+                    aria-label="كمية المنتج"
+                  >
+
+                  <button
+                    type="button"
+                    onclick="
+                      changeQuantity(
+                        '${escapeHTML(
+                          item.id
+                        )}',
+                        1
+                      )
+                    "
+                    aria-label="زيادة الكمية"
+                  >
+                    +
+                  </button>
+
+                </div>
+
+              </div>
+
+              <div class="cart-item-side">
+
+                <div class="item-total">
+                  ${formatPrice(
+                    lineTotal
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  class="remove-link"
+                  onclick="
+                    removeFromCart(
+                      '${escapeHTML(
+                        item.id
+                      )}'
+                    )
+                  "
+                >
+                  🗑 حذف
+                </button>
+
+              </div>
 
             </div>
-
-          </div>
-        `;
-      })
+          `;
+        }
+      )
       .join("");
 
   updateCartSummary();
 }
 
 function updateCartSummary() {
+
   const cart =
     getCart();
 
   const qty =
     cart.reduce(
-      (sum, item) =>
-        sum + item.quantity,
+      (
+        sum,
+        item
+      ) =>
+        sum +
+        item.quantity,
       0
     );
 
@@ -750,7 +973,9 @@ function updateCartSummary() {
       "total"
     );
 
-  if (summaryQuantityEl) {
+  if (
+    summaryQuantityEl
+  ) {
     summaryQuantityEl.textContent =
       qty;
   }
@@ -771,21 +996,26 @@ function updateCartSummary() {
 }
 
 /* =========================================================
-   Products — Supabase
+   PRODUCTS — SUPABASE
    ========================================================= */
 
 async function loadProducts() {
+
   const grid =
     document.getElementById(
       "products"
     );
 
-  if (!grid) return;
+  if (!grid) {
+    return;
+  }
 
   try {
+
     if (
       !window.supabaseClient
     ) {
+
       throw new Error(
         "Supabase client غير متاح"
       );
@@ -797,7 +1027,7 @@ async function loadProducts() {
 
     const {
       data,
-      error,
+      error
     } =
       await window.supabaseClient
         .from(table)
@@ -805,7 +1035,8 @@ async function loadProducts() {
         .order(
           "created_at",
           {
-            ascending: false,
+            ascending:
+              false
           }
         );
 
@@ -818,12 +1049,18 @@ async function loadProducts() {
         normalizeProduct
       );
 
+    console.log(
+      "MMK Products loaded:",
+      ALL_PRODUCTS
+    );
+
     renderProductsGrid();
 
-  } catch (err) {
+  } catch (error) {
+
     console.error(
       "خطأ في تحميل المنتجات:",
-      err
+      error
     );
 
     grid.innerHTML = `
@@ -836,57 +1073,100 @@ async function loadProducts() {
 }
 
 /* =========================================================
-   Normalize Product
+   NORMALIZE PRODUCT
    ========================================================= */
 
-function normalizeProduct(p) {
+function normalizeProduct(
+  product
+) {
+
   return {
-    id: p.id,
+
+    id:
+      product.id,
 
     name:
-      p.name ||
-      p.title ||
+      product.name ||
+      product.title ||
       "منتج",
 
     description:
-      p.description ||
+      product.description ||
       "",
 
     price:
-      Number(p.price) ||
-      0,
+      Number(
+        product.price
+      ) || 0,
 
     image_url:
-      p.image_url ||
-      p.image ||
-      p.imageUrl ||
+      product.image_url ||
+      product.image ||
+      product.imageUrl ||
       "",
 
-    /* نحتفظ بالقيمة الأصلية الموجودة في Supabase */
     category:
-      p.category ||
+      product.category ||
       "",
 
     stock:
-      p.stock !==
+      product.stock !==
         undefined &&
-      p.stock !== null
-        ? Number(p.stock)
-        : null,
+      product.stock !==
+        null
+        ? Number(
+            product.stock
+          )
+        : null
   };
 }
 
 /* =========================================================
-   Render Products
+   PRODUCT FILTERING
+   ========================================================= */
+
+function matchesProductCategory(
+  product,
+  selectedCategory
+) {
+
+  const productCategory =
+    normalizeProductCategory(
+      product.category
+    );
+
+  const category =
+    normalizeProductCategory(
+      selectedCategory
+    );
+
+  if (
+    category ===
+    "all"
+  ) {
+    return true;
+  }
+
+  return (
+    productCategory ===
+    category
+  );
+}
+
+/* =========================================================
+   RENDER PRODUCTS GRID
    ========================================================= */
 
 function renderProductsGrid() {
+
   const grid =
     document.getElementById(
       "products"
     );
 
-  if (!grid) return;
+  if (!grid) {
+    return;
+  }
 
   const searchInput =
     document.getElementById(
@@ -900,39 +1180,36 @@ function renderProductsGrid() {
           .toLowerCase()
       : "";
 
+  const selectedCategory =
+    normalizeProductCategory(
+      CURRENT_CATEGORY
+    );
+
   const filtered =
     ALL_PRODUCTS.filter(
-      (p) => {
+      (product) => {
 
-        const productCategory =
-          normalizeProductCategory(
-            p.category
+        const categoryMatch =
+          matchesProductCategory(
+            product,
+            selectedCategory
           );
 
-        const selectedCategory =
-          normalizeProductCategory(
-            CURRENT_CATEGORY
-          );
-
-        const matchesCategory =
-          selectedCategory ===
-            "all" ||
-          productCategory ===
-            selectedCategory;
-
-        const productName =
+        const name =
           String(
-            p.name || ""
+            product.name ||
+              ""
           ).toLowerCase();
 
         const description =
           String(
-            p.description || ""
+            product.description ||
+              ""
           ).toLowerCase();
 
-        const matchesSearch =
+        const searchMatch =
           query === "" ||
-          productName.includes(
+          name.includes(
             query
           ) ||
           description.includes(
@@ -940,18 +1217,31 @@ function renderProductsGrid() {
           );
 
         return (
-          matchesCategory &&
-          matchesSearch
+          categoryMatch &&
+          searchMatch
         );
       }
     );
+
+  console.log(
+    "Current category:",
+    selectedCategory
+  );
+
+  console.log(
+    "Filtered products:",
+    filtered
+  );
 
   if (
     filtered.length ===
     0
   ) {
+
     grid.innerHTML = `
-      <div class="empty-state products-empty-state">
+      <div
+        class="empty-state products-empty-state"
+      >
         لا توجد منتجات مطابقة
         للبحث أو هذا القسم حاليًا.
       </div>
@@ -962,201 +1252,257 @@ function renderProductsGrid() {
 
   grid.innerHTML =
     filtered
-      .map((p) => {
+      .map(
+        (product) => {
 
-        const outOfStock =
-          p.stock !==
-            null &&
-          p.stock <= 0;
+          const outOfStock =
+            product.stock !==
+              null &&
+            product.stock <=
+              0;
 
-        const categoryName =
-          getCategoryDisplayName(
-            p.category
-          );
+          const categoryName =
+            getCategoryDisplayName(
+              product.category
+            );
 
-        return `
-          <div
-            class="product-card"
-            data-category="${escapeHTML(
-              normalizeProductCategory(
-                p.category
-              )
-            )}"
-          >
+          const image =
+            product.image_url ||
+            DEFAULT_PRODUCT_IMAGE;
 
-            <img
-              class="product-image"
-              src="${
-                escapeHTML(
-                  p.image_url
-                ) ||
-                "https://via.placeholder.com/300"
-              }"
-              alt="${escapeHTML(
-                p.name
+          return `
+            <div
+              class="product-card"
+              data-category="${escapeHTML(
+                normalizeProductCategory(
+                  product.category
+                )
               )}"
-              onerror="
-                this.src='https://via.placeholder.com/300'
-              "
             >
 
-            <div class="product-body">
+              <img
+                class="product-image"
+                src="${escapeHTML(
+                  image
+                )}"
+                alt="${escapeHTML(
+                  product.name
+                )}"
+                onerror="
+                  this.onerror=null;
+                  this.src='${DEFAULT_PRODUCT_IMAGE}';
+                "
+              >
 
-              <span class="product-category">
-                ${escapeHTML(
-                  categoryName
-                )}
-              </span>
+              <div class="product-body">
 
-              <h3 class="product-name">
-                ${escapeHTML(
-                  p.name
-                )}
-              </h3>
-
-              <p class="product-desc">
-                ${escapeHTML(
-                  p.description
-                )}
-              </p>
-
-              <div class="product-footer">
-
-                <span class="product-price">
-                  ${formatPrice(
-                    p.price
+                <span class="product-category">
+                  ${escapeHTML(
+                    categoryName
                   )}
                 </span>
 
-                <div class="product-actions">
+                <h3 class="product-name">
+                  ${escapeHTML(
+                    product.name
+                  )}
+                </h3>
 
-                  <button
-                    type="button"
-                    class="icon-btn"
-                    title="أضف للسلة"
-                    aria-label="أضف المنتج للسلة"
-                    ${
-                      outOfStock
-                        ? "disabled"
-                        : ""
-                    }
-                    onclick="
-                      addToCartById(
-                        '${escapeHTML(
-                          String(
-                            p.id
-                          )
-                        )}'
-                      )
-                    "
-                  >
-                    🛒
-                  </button>
+                <p class="product-desc">
+                  ${escapeHTML(
+                    product.description
+                  )}
+                </p>
 
-                  <button
-                    type="button"
-                    class="btn btn-primary"
-                    ${
-                      outOfStock
-                        ? "disabled"
-                        : ""
-                    }
-                    onclick="
-                      buyNow(
-                        '${escapeHTML(
-                          String(
-                            p.id
-                          )
-                        )}'
-                      )
-                    "
-                  >
-                    ${
-                      outOfStock
-                        ? "غير متوفر"
-                        : "شراء الآن"
-                    }
-                  </button>
+                <div class="product-footer">
+
+                  <span class="product-price">
+                    ${formatPrice(
+                      product.price
+                    )}
+                  </span>
+
+                  <div class="product-actions">
+
+                    <button
+                      type="button"
+                      class="icon-btn"
+                      title="أضف للسلة"
+                      aria-label="أضف المنتج للسلة"
+                      ${
+                        outOfStock
+                          ? "disabled"
+                          : ""
+                      }
+                      onclick="
+                        addToCartById(
+                          '${escapeHTML(
+                            String(
+                              product.id
+                            )
+                          )}'
+                        )
+                      "
+                    >
+                      🛒
+                    </button>
+
+                    <button
+                      type="button"
+                      class="btn btn-primary"
+                      ${
+                        outOfStock
+                          ? "disabled"
+                          : ""
+                      }
+                      onclick="
+                        buyNow(
+                          '${escapeHTML(
+                            String(
+                              product.id
+                            )
+                          )}'
+                        )
+                      "
+                    >
+                      ${
+                        outOfStock
+                          ? "غير متوفر"
+                          : "شراء الآن"
+                      }
+                    </button>
+
+                  </div>
 
                 </div>
 
               </div>
 
             </div>
-
-          </div>
-        `;
-      })
+          `;
+        }
+      )
       .join("");
 }
 
 /* =========================================================
-   Category Filter
+   FILTER BY CATEGORY
    ========================================================= */
 
 function filterByCategory(
   category
 ) {
+
   CURRENT_CATEGORY =
     normalizeProductCategory(
       category
+    );
+
+  updateCategoryButtons();
+
+  renderProductsGrid();
+
+  scrollToProducts();
+}
+
+/* =========================================================
+   FILTER PRODUCTS
+   تدعم:
+   filterProducts()
+   filterProducts("cables")
+   ========================================================= */
+
+function filterProducts(
+  category
+) {
+
+  if (
+    category !==
+      undefined &&
+    category !==
+      null
+  ) {
+
+    CURRENT_CATEGORY =
+      normalizeProductCategory(
+        category
+      );
+
+    updateCategoryButtons();
+
+    scrollToProducts();
+  }
+
+  renderProductsGrid();
+}
+
+/* =========================================================
+   CATEGORY BUTTONS
+   ========================================================= */
+
+function updateCategoryButtons() {
+
+  const selected =
+    normalizeProductCategory(
+      CURRENT_CATEGORY
     );
 
   document
     .querySelectorAll(
       ".category-pill"
     )
-    .forEach((btn) => {
+    .forEach(
+      (button) => {
 
-      const buttonCategory =
-        normalizeProductCategory(
-          btn.getAttribute(
-            "data-category"
-          )
+        const buttonCategory =
+          normalizeProductCategory(
+            button.getAttribute(
+              "data-category"
+            )
+          );
+
+        button.classList.toggle(
+          "active",
+          buttonCategory ===
+            selected
         );
+      }
+    );
+}
 
-      btn.classList.toggle(
-        "active",
-        buttonCategory ===
-          CURRENT_CATEGORY
-      );
-    });
+/* =========================================================
+   SCROLL TO PRODUCTS
+   ========================================================= */
 
-  renderProductsGrid();
+function scrollToProducts() {
 
-  /* الانتقال للمنتجات عند اختيار قسم */
-  const productsSection =
+  const products =
     document.getElementById(
       "products"
     );
 
-  if (
-    productsSection &&
-    window.location.hash !==
-      "#products"
-  ) {
-    setTimeout(() => {
-      productsSection.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }, 50);
+  if (!products) {
+    return;
   }
+
+  setTimeout(() => {
+
+    products.scrollIntoView({
+      behavior:
+        "smooth",
+      block:
+        "start"
+    });
+
+  }, 50);
 }
 
 /* =========================================================
-   Search Filter
-   ========================================================= */
-
-function filterProducts() {
-  renderProductsGrid();
-}
-
-/* =========================================================
-   Customer Account
+   ACCOUNT LINK
    ========================================================= */
 
 async function updateAccountLink() {
+
   const link =
     document.getElementById(
       "accountLink"
@@ -1170,12 +1516,16 @@ async function updateAccountLink() {
   }
 
   try {
-    const { data } =
+
+    const {
+      data
+    } =
       await window.supabaseClient.auth.getSession();
 
     if (
       data?.session?.user
     ) {
+
       const meta =
         data.session.user
           .user_metadata ||
@@ -1189,7 +1539,9 @@ async function updateAccountLink() {
       const firstName =
         String(
           fullName
-        ).split(" ")[0];
+        )
+          .trim()
+          .split(/\s+/)[0];
 
       link.textContent =
         `👤 ${firstName}`;
@@ -1206,83 +1558,100 @@ async function updateAccountLink() {
         "login.html";
     }
 
-  } catch (e) {
+  } catch (error) {
 
     console.warn(
       "تعذر التحقق من جلسة العميل:",
-      e
+      error
     );
   }
 }
 
 /* =========================================================
-   Init
+   INITIALIZATION
    ========================================================= */
 
 document.addEventListener(
   "DOMContentLoaded",
   () => {
 
+    /* -----------------------------
+       Cart
+    ----------------------------- */
+
     updateCartCount();
 
-    /* -----------------------------------------------
-       الأقسام
-    ------------------------------------------------ */
+
+    /* -----------------------------
+       Category buttons
+    ----------------------------- */
 
     const categoriesList =
       document.getElementById(
         "categoriesList"
       );
 
-    if (categoriesList) {
+    if (
+      categoriesList
+    ) {
 
       categoriesList.addEventListener(
         "click",
-        (e) => {
+        (event) => {
 
-          const btn =
-            e.target.closest(
+          const button =
+            event.target.closest(
               ".category-pill"
             );
 
-          if (!btn) return;
+          if (!button) {
+            return;
+          }
 
-          filterByCategory(
-            btn.getAttribute(
+          const category =
+            button.getAttribute(
               "data-category"
-            )
+            );
+
+          filterProducts(
+            category
           );
         }
       );
     }
 
-    /* -----------------------------------------------
-       تحميل المنتجات
-    ------------------------------------------------ */
+
+    /* -----------------------------
+       Products
+    ----------------------------- */
 
     if (
       document.getElementById(
         "products"
       )
     ) {
+
       loadProducts();
     }
 
-    /* -----------------------------------------------
-       السلة
-    ------------------------------------------------ */
+
+    /* -----------------------------
+       Cart page
+    ----------------------------- */
 
     if (
       document.getElementById(
         "cartItems"
       )
     ) {
+
       renderCart();
     }
 
-    /* -----------------------------------------------
-       الحساب
-    ------------------------------------------------ */
+
+    /* -----------------------------
+       Account
+    ----------------------------- */
 
     updateAccountLink();
 
