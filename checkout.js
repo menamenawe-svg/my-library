@@ -1,7 +1,7 @@
 
 /* =========================================================
    checkout.js — متجر أم أم كي
-   متوافق مع checkout.html
+   نسخة متوافقة بالكامل مع checkout.html
    ========================================================= */
 
 /* =========================================================
@@ -37,6 +37,7 @@ const SHIPPING_PRICES = {
   "الوادي الجديد": 140
 };
 
+/* الأقصر لها نظام شحن خاص */
 const LUXOR_NAMES = [
   "الأقصر",
   "مدينة الأقصر",
@@ -82,7 +83,25 @@ const PAYMENT_NUMBERS = {
 };
 
 /* =========================================================
-   روابط بيانات المحافظات
+   بيانات الموقع
+   ========================================================= */
+
+let GOVERNORATES = [];
+let CENTERS = [];
+let VILLAGES = [];
+
+let selectedGovernorate = "";
+let selectedCity = "";
+let selectedVillage = "";
+
+let currentShippingPrice = null;
+let selectedPaymentMethod = "cod";
+
+let receiptFile = null;
+let isSubmitting = false;
+
+/* =========================================================
+   روابط البيانات
    ========================================================= */
 
 const DATA_URLS = {
@@ -97,37 +116,20 @@ const DATA_URLS = {
 };
 
 /* =========================================================
-   حالة الصفحة
+   أدوات مساعدة
    ========================================================= */
 
-let GOVERNORATES = [];
-let CENTERS = [];
-let VILLAGES = [];
+function normalizeArabic(str) {
+  if (!str) return "";
 
-let selectedGovernorate = "";
-let selectedGovernorateId = "";
-
-let selectedCity = "";
-let selectedCityId = "";
-
-let selectedVillage = "";
-
-let currentShippingPrice = null;
-
-let selectedPaymentMethod = "cod";
-
-let receiptFile = null;
-
-let isSubmitting = false;
-
-/* =========================================================
-   أدوات عامة
-   ========================================================= */
-
-function formatPrice(value) {
-  const number = Number(value) || 0;
-
-  return `${number.toLocaleString("ar-EG")} ج.م`;
+  return String(str)
+    .replace(/[إأآا]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ة/g, "ه")
+    .replace(/[ًٌٍَُِّْـ]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 }
 
 function escapeHTML(value) {
@@ -143,21 +145,40 @@ function escapeHTML(value) {
     .replace(/'/g, "&#039;");
 }
 
-/* =========================================================
-   تطبيع النص العربي
-   ========================================================= */
+function formatPrice(value) {
+  const number = Number(value) || 0;
 
-function normalizeArabic(str) {
-  if (!str) return "";
+  return (
+    new Intl.NumberFormat("ar-EG", {
+      maximumFractionDigits: 2
+    }).format(number) + " ج.م"
+  );
+}
 
-  return String(str)
-    .replace(/[إأآا]/g, "ا")
-    .replace(/ى/g, "ي")
-    .replace(/ة/g, "ه")
-    .replace(/[ًٌٍَُِّْ]/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
+function showToast(message, type = "info") {
+  if (typeof window.showToast === "function") {
+    window.showToast(message, type);
+    return;
+  }
+
+  const container =
+    document.getElementById("toastContainer");
+
+  if (!container) {
+    alert(message);
+    return;
+  }
+
+  const toast = document.createElement("div");
+
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.remove();
+  }, 3500);
 }
 
 /* =========================================================
@@ -170,7 +191,8 @@ function isLuxorGovernorate(name) {
   const normalized = normalizeArabic(name);
 
   return LUXOR_NAMES.some(
-    (item) => normalizeArabic(item) === normalized
+    (item) =>
+      normalizeArabic(item) === normalized
   );
 }
 
@@ -180,17 +202,8 @@ function findLuxorAreaPrice(areaName) {
   const normalized = normalizeArabic(areaName);
 
   for (const key in LUXOR_AREA_PRICES) {
-    if (normalizeArabic(key) === normalized) {
-      return LUXOR_AREA_PRICES[key];
-    }
-  }
-
-  for (const key in LUXOR_AREA_PRICES) {
-    const normalizedKey = normalizeArabic(key);
-
     if (
-      normalizedKey.includes(normalized) ||
-      normalized.includes(normalizedKey)
+      normalizeArabic(key) === normalized
     ) {
       return LUXOR_AREA_PRICES[key];
     }
@@ -216,7 +229,8 @@ function getShippingPriceForGovernorate(govName) {
     return SHIPPING_PRICES[govName];
   }
 
-  const normalized = normalizeArabic(govName);
+  const normalized =
+    normalizeArabic(govName);
 
   for (const key in SHIPPING_PRICES) {
     if (
@@ -230,7 +244,7 @@ function getShippingPriceForGovernorate(govName) {
 }
 
 /* =========================================================
-   بيانات المحافظات
+   استخراج أسماء البيانات
    ========================================================= */
 
 function getGovName(g) {
@@ -251,10 +265,6 @@ function getGovId(g) {
     getGovName(g)
   );
 }
-
-/* =========================================================
-   بيانات المراكز
-   ========================================================= */
 
 function getCenterName(c) {
   return (
@@ -284,10 +294,6 @@ function getCenterGovId(c) {
   );
 }
 
-/* =========================================================
-   بيانات القرى
-   ========================================================= */
-
 function getVillageName(v) {
   return (
     v?.city_name_ar ||
@@ -304,13 +310,28 @@ function getVillageCenterId(v) {
     v?.center_gov_id ??
     v?.center_id ??
     v?.centerId ??
-    v?.center_govId
+    v?.center
   );
 }
 
 /* =========================================================
-   تحميل بيانات الموقع
+   تحميل البيانات
    ========================================================= */
+
+async function fetchJSON(url) {
+  const response = await fetch(url, {
+    method: "GET",
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `HTTP ${response.status}`
+    );
+  }
+
+  return await response.json();
+}
 
 async function loadLocationData() {
   const govSelect =
@@ -318,80 +339,75 @@ async function loadLocationData() {
       "customerGovernorate"
     );
 
-  if (!govSelect) return;
-
   try {
-    govSelect.innerHTML =
-      `<option value="">جاري تحميل المحافظات...</option>`;
-
-    govSelect.disabled = true;
-
-    const responses = await Promise.all([
-      fetch(DATA_URLS.governorates),
-      fetch(DATA_URLS.centers),
-      fetch(DATA_URLS.villages)
-    ]);
-
-    const [govRes, centerRes, villageRes] =
-      responses;
+    const results =
+      await Promise.allSettled([
+        fetchJSON(DATA_URLS.governorates),
+        fetchJSON(DATA_URLS.centers),
+        fetchJSON(DATA_URLS.villages)
+      ]);
 
     if (
-      !govRes.ok ||
-      !centerRes.ok ||
-      !villageRes.ok
+      results[0].status === "fulfilled"
     ) {
-      throw new Error(
-        "فشل تحميل بيانات المحافظات والمراكز والقرى"
-      );
+      GOVERNORATES =
+        Array.isArray(results[0].value)
+          ? results[0].value
+          : [];
     }
 
-    GOVERNORATES =
-      await govRes.json();
-
-    CENTERS =
-      await centerRes.json();
-
-    VILLAGES =
-      await villageRes.json();
-
-    if (!Array.isArray(GOVERNORATES)) {
-      throw new Error(
-        "بيانات المحافظات غير صحيحة"
-      );
+    if (
+      results[1].status === "fulfilled"
+    ) {
+      CENTERS =
+        Array.isArray(results[1].value)
+          ? results[1].value
+          : [];
     }
 
-    if (!Array.isArray(CENTERS)) {
-      throw new Error(
-        "بيانات المراكز غير صحيحة"
-      );
+    if (
+      results[2].status === "fulfilled"
+    ) {
+      VILLAGES =
+        Array.isArray(results[2].value)
+          ? results[2].value
+          : [];
     }
 
-    if (!Array.isArray(VILLAGES)) {
+    if (GOVERNORATES.length === 0) {
       throw new Error(
-        "بيانات القرى غير صحيحة"
+        "لم يتم تحميل المحافظات"
       );
     }
 
     populateGovernorates();
 
-    setLocationStatus(
-      "",
-      "info"
-    );
+    if (
+      CENTERS.length === 0 ||
+      VILLAGES.length === 0
+    ) {
+      setLocationStatus(
+        "تم تحميل المحافظات، لكن بعض بيانات المراكز أو القرى غير متاحة حاليًا.",
+        "info"
+      );
+    }
 
   } catch (error) {
     console.error(
-      "تعذر تحميل بيانات الموقع:",
+      "Location data error:",
       error
     );
 
-    govSelect.disabled = true;
-
-    govSelect.innerHTML =
-      `<option value="">تعذر تحميل المحافظات</option>`;
+    if (govSelect) {
+      govSelect.innerHTML = `
+        <option value="">
+          تعذر تحميل المحافظات
+        </option>
+      `;
+    }
 
     setLocationStatus(
-      "تعذر تحميل بيانات المحافظات والمراكز والقرى. تأكد من اتصال الإنترنت ثم حدّث الصفحة.",
+      "تعذر تحميل بيانات المحافظات. تأكد من اتصال الإنترنت ثم حدّث الصفحة.",
       "error"
     );
   }
@@ -402,41 +418,34 @@ async function loadLocationData() {
    ========================================================= */
 
 function populateGovernorates() {
-  const govSelect =
+  const select =
     document.getElementById(
       "customerGovernorate"
     );
 
-  if (!govSelect) return;
+  if (!select) return;
 
-  govSelect.innerHTML =
-    `<option value="">اختر المحافظة</option>`;
+  select.innerHTML = `
+    <option value="">
+      اختر المحافظة
+    </option>
+  `;
 
   GOVERNORATES.forEach((gov) => {
-    const name =
-      getGovName(gov);
-
-    const id =
-      getGovId(gov);
+    const name = getGovName(gov);
+    const id = getGovId(gov);
 
     if (!name) return;
 
     const option =
       document.createElement("option");
 
-    option.value = String(id);
-
+    option.value = id;
     option.textContent = name;
-
     option.dataset.name = name;
 
-    option.dataset.id = String(id);
-
-    govSelect.appendChild(option);
+    select.appendChild(option);
   });
-
-  govSelect.disabled =
-    GOVERNORATES.length === 0;
 }
 
 /* =========================================================
@@ -458,14 +467,19 @@ function populateCenters(govId) {
     return;
   }
 
-  citySelect.innerHTML =
-    `<option value="">اختر المركز</option>`;
+  citySelect.innerHTML = `
+    <option value="">
+      اختر المركز
+    </option>
+  `;
+
+  villageSelect.innerHTML = `
+    <option value="">
+      اختر المركز أولاً
+    </option>
+  `;
 
   citySelect.disabled = true;
-
-  villageSelect.innerHTML =
-    `<option value="">اختر المركز أولاً</option>`;
-
   villageSelect.disabled = true;
 
   const filtered =
@@ -480,8 +494,11 @@ function populateCenters(govId) {
     });
 
   if (filtered.length === 0) {
-    citySelect.innerHTML =
-      `<option value="">لا توجد مراكز متاحة</option>`;
+    citySelect.innerHTML = `
+      <option value="">
+        لا توجد مراكز متاحة
+      </option>
+    `;
 
     return;
   }
@@ -498,13 +515,9 @@ function populateCenters(govId) {
     const option =
       document.createElement("option");
 
-    option.value = String(id);
-
+    option.value = id;
     option.textContent = name;
-
     option.dataset.name = name;
-
-    option.dataset.id = String(id);
 
     citySelect.appendChild(option);
   });
@@ -517,32 +530,36 @@ function populateCenters(govId) {
    ========================================================= */
 
 function populateVillages(centerId) {
-  const villageSelect =
+  const select =
     document.getElementById(
       "customerVillage"
     );
 
-  if (!villageSelect) return;
+  if (!select) return;
 
-  villageSelect.innerHTML =
-    `<option value="">اختر القرية / الحي</option>`;
+  select.innerHTML = `
+    <option value="">
+      اختر القرية / الحي
+    </option>
+  `;
 
-  villageSelect.disabled = true;
+  select.disabled = true;
 
   const filtered =
     VILLAGES.filter((village) => {
-      const villageCenterId =
-        getVillageCenterId(village);
-
       return (
-        String(villageCenterId) ===
-        String(centerId)
+        String(
+          getVillageCenterId(village)
+        ) === String(centerId)
       );
     });
 
   if (filtered.length === 0) {
-    villageSelect.innerHTML =
-      `<option value="">لا توجد قرى متاحة</option>`;
+    select.innerHTML = `
+      <option value="">
+        لا توجد قرى متاحة
+      </option>
+    `;
 
     return;
   }
@@ -557,15 +574,12 @@ function populateVillages(centerId) {
       document.createElement("option");
 
     option.value = name;
-
     option.textContent = name;
 
-    option.dataset.name = name;
-
-    villageSelect.appendChild(option);
+    select.appendChild(option);
   });
 
-  villageSelect.disabled = false;
+  select.disabled = false;
 }
 
 /* =========================================================
@@ -584,10 +598,8 @@ function setLocationStatus(
   if (!box) return;
 
   if (!message) {
-    box.textContent = "";
     box.style.display = "none";
-    box.className =
-      "status-box info u-hidden";
+    box.textContent = "";
     return;
   }
 
@@ -643,56 +655,6 @@ function updateLibraryPickupVisibility() {
 }
 
 /* =========================================================
-   حقول الدفع
-   ========================================================= */
-
-function updatePaymentFieldsVisibility() {
-  const transactionRow =
-    document.querySelector(
-      ".transaction-row"
-    );
-
-  const receiptInput =
-    document.getElementById(
-      "paymentReceipt"
-    );
-
-  const receiptRow =
-    receiptInput?.closest(
-      ".form-row"
-    );
-
-  const needsReceipt =
-    selectedPaymentMethod !== "cod";
-
-  if (transactionRow) {
-    transactionRow.style.display =
-      needsReceipt
-        ? ""
-        : "none";
-  }
-
-  if (receiptRow) {
-    receiptRow.style.display =
-      needsReceipt
-        ? ""
-        : "none";
-  }
-
-  if (!needsReceipt) {
-    transactionRow
-      ?.classList.remove(
-        "invalid"
-      );
-
-    receiptRow
-      ?.classList.remove(
-        "invalid"
-      );
-  }
-}
-
-/* =========================================================
    أرقام الدفع
    ========================================================= */
 
@@ -712,7 +674,9 @@ function updatePaymentNumbers() {
 
     box.innerHTML = `
       <div class="payment-number-content">
-        <div class="payment-number-icon">🟠</div>
+        <div class="payment-number-icon">
+          🟠
+        </div>
 
         <div>
           <strong>Orange Cash</strong>
@@ -738,7 +702,9 @@ function updatePaymentNumbers() {
 
     box.innerHTML = `
       <div class="payment-number-content">
-        <div class="payment-number-icon">🏦</div>
+        <div class="payment-number-icon">
+          🏦
+        </div>
 
         <div>
           <strong>InstaPay</strong>
@@ -756,29 +722,6 @@ function updatePaymentNumbers() {
     return;
   }
 
-  if (
-    selectedPaymentMethod ===
-    "library_pickup"
-  ) {
-    box.hidden = false;
-
-    box.innerHTML = `
-      <div class="payment-number-content">
-        <div class="payment-number-icon">🏪</div>
-
-        <div>
-          <strong>الاستلام من مكتبة مينا</strong>
-
-          <div class="payment-number-line">
-            يتم دفع 50% مقدمًا لتأكيد الطلب.
-          </div>
-        </div>
-      </div>
-    `;
-
-    return;
-  }
-
   box.hidden = true;
   box.innerHTML = "";
 }
@@ -788,33 +731,30 @@ function updatePaymentNumbers() {
    ========================================================= */
 
 function updateShippingCalculation() {
-  const shippingStatus =
+  const status =
     document.getElementById(
       "shippingStatus"
     );
 
-  const shippingText =
+  const text =
     document.getElementById(
       "shippingPriceText"
     );
 
-  if (!shippingStatus || !shippingText) {
-    return;
-  }
+  if (!status || !text) return;
 
   updateLibraryPickupVisibility();
 
   if (!selectedGovernorate) {
     currentShippingPrice = null;
 
-    shippingText.textContent =
+    text.textContent =
       "اختر المحافظة والمنطقة لحساب سعر الشحن";
 
-    shippingStatus.className =
+    status.className =
       "status-box info";
 
     updateOrderTotals();
-
     return;
   }
 
@@ -824,75 +764,131 @@ function updateShippingCalculation() {
     );
 
   if (
+    luxor &&
     selectedPaymentMethod ===
-      "library_pickup" &&
-    luxor
+      "library_pickup"
   ) {
     currentShippingPrice = 0;
 
-    shippingText.textContent =
+    text.textContent =
       "الاستلام من مكتبة مينا في الأقصر — بدون مصاريف شحن";
 
-    shippingStatus.className =
+    status.className =
       "status-box success";
 
     updateOrderTotals();
-
     return;
   }
 
   if (luxor) {
-    if (selectedVillage) {
-      const areaPrice =
-        findLuxorAreaPrice(
-          selectedVillage
-        );
+    const areaPrice =
+      findLuxorAreaPrice(
+        selectedVillage
+      );
 
-      if (areaPrice !== null) {
-        currentShippingPrice =
-          areaPrice;
+    if (areaPrice !== null) {
+      currentShippingPrice =
+        areaPrice;
 
-        shippingText.textContent =
-          `سعر الشحن لمنطقتك في الأقصر: ${formatPrice(
-            areaPrice
-          )}`;
-      } else {
-        currentShippingPrice =
-          LUXOR_DEFAULT_PRICE;
-
-        shippingText.textContent =
-          `سعر الشحن المحلي للأقصر: ${formatPrice(
-            LUXOR_DEFAULT_PRICE
-          )}`;
-      }
+      text.textContent =
+        `سعر الشحن لمنطقتك في الأقصر: ${formatPrice(
+          areaPrice
+        )}`;
     } else {
       currentShippingPrice =
         LUXOR_DEFAULT_PRICE;
 
-      shippingText.textContent =
+      text.textContent =
         `سعر الشحن الافتراضي للأقصر: ${formatPrice(
           LUXOR_DEFAULT_PRICE
-        )} — اختر القرية / الحي للسعر الدقيق`;
+        )}`;
     }
   } else {
-    const price =
+    currentShippingPrice =
       getShippingPriceForGovernorate(
         selectedGovernorate
       );
 
-    currentShippingPrice =
-      price;
-
-    shippingText.textContent =
+    text.textContent =
       `سعر الشحن إلى ${selectedGovernorate}: ${formatPrice(
-        price
+        currentShippingPrice
       )}`;
   }
 
-  shippingStatus.className =
+  status.className =
     "status-box success";
 
   updateOrderTotals();
+}
+
+/* =========================================================
+   السلة
+   ========================================================= */
+
+function getCheckoutCart() {
+  try {
+    if (
+      typeof getCart === "function"
+    ) {
+      const cart = getCart();
+
+      return Array.isArray(cart)
+        ? cart
+        : [];
+    }
+  } catch (error) {
+    console.warn(
+      "getCart error:",
+      error
+    );
+  }
+
+  const key =
+    typeof CART_KEY !== "undefined"
+      ? CART_KEY
+      : "cart";
+
+  try {
+    const cart =
+      JSON.parse(
+        localStorage.getItem(key)
+      );
+
+    return Array.isArray(cart)
+      ? cart
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function getCartQuantitySafe() {
+  const cart =
+    getCheckoutCart();
+
+  return cart.reduce(
+    (sum, item) =>
+      sum +
+      Number(
+        item.quantity || 1
+      ),
+    0
+  );
+}
+
+function getCartTotalSafe() {
+  const cart =
+    getCheckoutCart();
+
+  return cart.reduce(
+    (sum, item) =>
+      sum +
+      Number(item.price || 0) *
+        Number(
+          item.quantity || 1
+        ),
+    0
+  );
 }
 
 /* =========================================================
@@ -900,9 +896,6 @@ function updateShippingCalculation() {
    ========================================================= */
 
 function renderCheckoutSummary() {
-  const cart =
-    getCart();
-
   const container =
     document.getElementById(
       "checkoutItems"
@@ -910,64 +903,91 @@ function renderCheckoutSummary() {
 
   if (!container) return;
 
-  if (!cart.length) {
-    container.innerHTML =
-      `<p class="checkout-empty-message">
+  const cart =
+    getCheckoutCart();
+
+  if (cart.length === 0) {
+    container.innerHTML = `
+      <p class="checkout-empty-message">
         السلة فارغة
-      </p>`;
-  } else {
-    container.innerHTML =
-      cart
-        .map((item) => {
-          const image =
-            escapeHTML(
-              item.image
-            ) ||
-            "https://via.placeholder.com/60";
+      </p>
+    `;
 
-          const name =
-            escapeHTML(
-              item.name
-            );
+    updateOrderTotals();
+    return;
+  }
 
-          const quantity =
-            Number(item.quantity) || 1;
+  container.innerHTML =
+    cart
+      .map((item) => {
+        const image =
+          typeof item.image ===
+          "string"
+            ? item.image
+            : "";
 
-          const price =
-            Number(item.price) || 0;
+        /*
+          لا نستخدم via.placeholder.com
+          حتى لا تظهر ERR_CONNECTION_CLOSED
+        */
 
-          return `
-            <div class="checkout-summary-item">
+        const imageHTML = image
+          ? `
+            <img
+              src="${escapeHTML(image)}"
+              alt="${escapeHTML(
+                item.name || "منتج"
+              )}"
+              onerror="
+                this.style.display='none';
+              "
+            >
+          `
+          : `
+            <div
+              class="checkout-no-image"
+              aria-hidden="true"
+            >
+              🛍️
+            </div>
+          `;
 
-              <img
-                src="${image}"
-                alt="${name}"
-                onerror="
-                  this.src='https://via.placeholder.com/60'
-                "
-              >
+        return `
+          <div class="checkout-summary-item">
 
-              <div>
-                <div class="name">
-                  ${name}
-                </div>
+            ${imageHTML}
 
-                <div class="meta">
-                  الكمية: ${quantity}
-                </div>
-              </div>
-
-              <div class="price">
-                ${formatPrice(
-                  price * quantity
+            <div>
+              <div class="name">
+                ${escapeHTML(
+                  item.name ||
+                    "منتج"
                 )}
               </div>
 
+              <div class="meta">
+                الكمية:
+                ${Number(
+                  item.quantity || 1
+                )}
+              </div>
             </div>
-          `;
-        })
-        .join("");
-  }
+
+            <div class="price">
+              ${formatPrice(
+                Number(
+                  item.price || 0
+                ) *
+                  Number(
+                    item.quantity || 1
+                  )
+              )}
+            </div>
+
+          </div>
+        `;
+      })
+      .join("");
 
   const quantity =
     document.getElementById(
@@ -981,13 +1001,13 @@ function renderCheckoutSummary() {
 
   if (quantity) {
     quantity.textContent =
-      cartQuantity();
+      getCartQuantitySafe();
   }
 
   if (subtotal) {
     subtotal.textContent =
       formatPrice(
-        cartTotal()
+        getCartTotalSafe()
       );
   }
 
@@ -1000,7 +1020,7 @@ function renderCheckoutSummary() {
 
 function updateOrderTotals() {
   const subtotal =
-    Number(cartTotal()) || 0;
+    getCartTotalSafe();
 
   let shipping =
     currentShippingPrice;
@@ -1057,10 +1077,10 @@ function updateOrderTotals() {
 
 function updatePaymentAmounts() {
   const subtotal =
-    Number(cartTotal()) || 0;
+    getCartTotalSafe();
 
   let shipping =
-    Number(currentShippingPrice) || 0;
+    currentShippingPrice || 0;
 
   if (
     selectedPaymentMethod ===
@@ -1092,9 +1112,7 @@ function updatePaymentAmounts() {
       instructions.textContent =
         "في حالة الدفع عند الاستلام، يتم دفع مصاريف الشحن مقدمًا فقط، ويتم دفع باقي قيمة الطلب عند الاستلام.";
     }
-  }
-
-  else if (
+  } else if (
     selectedPaymentMethod ===
     "library_pickup"
   ) {
@@ -1106,15 +1124,13 @@ function updatePaymentAmounts() {
 
     if (instructions) {
       instructions.textContent =
-        "الاستلام من مكتبة مينا في الأقصر: يتم دفع 50% من قيمة الطلب مقدمًا لتأكيد الطلب، ودفع 50% المتبقية عند الاستلام من المكتبة.";
+        "الاستلام من مكتبة مينا في الأقصر: يتم دفع 50% من قيمة الطلب مقدمًا لتأكيد الطلب، ودفع 50% المتبقية عند الاستلام.";
     }
-  }
-
-  else {
+  } else {
     prepaid = total;
     remaining = 0;
 
-    const methodName =
+    const method =
       selectedPaymentMethod ===
       "orange_cash"
         ? "Orange Cash"
@@ -1122,7 +1138,7 @@ function updatePaymentAmounts() {
 
     if (instructions) {
       instructions.textContent =
-        `يتم دفع إجمالي قيمة الطلب مقدمًا عبر ${methodName}، ثم إرفاق رقم العملية وصورة الإيصال.`;
+        `يتم دفع إجمالي قيمة الطلب مقدمًا عبر ${method}، ثم إرفاق رقم العملية وصورة الإيصال.`;
     }
   }
 
@@ -1146,7 +1162,6 @@ function updatePaymentAmounts() {
       formatPrice(remaining);
   }
 
-  updatePaymentFieldsVisibility();
   updatePaymentNumbers();
 }
 
@@ -1155,7 +1170,9 @@ function updatePaymentAmounts() {
    ========================================================= */
 
 async function requireCustomerLogin() {
-  if (!window.supabaseClient) {
+  if (
+    !window.supabaseClient
+  ) {
     alert(
       "تعذر الاتصال بنظام تسجيل الدخول."
     );
@@ -1167,10 +1184,7 @@ async function requireCustomerLogin() {
   }
 
   try {
-    const {
-      data,
-      error
-    } =
+    const { data, error } =
       await window.supabaseClient.auth.getSession();
 
     if (
@@ -1188,10 +1202,9 @@ async function requireCustomerLogin() {
     }
 
     return true;
-
   } catch (error) {
     console.error(
-      "Session check error:",
+      "Session error:",
       error
     );
 
@@ -1209,6 +1222,25 @@ async function requireCustomerLogin() {
 function validateEgyptianPhone(phone) {
   return /^01[0125][0-9]{8}$/.test(
     String(phone).trim()
+  );
+}
+
+function setupPhoneMask() {
+  const input =
+    document.getElementById(
+      "customerPhone"
+    );
+
+  if (!input) return;
+
+  input.addEventListener(
+    "input",
+    () => {
+      input.value =
+        input.value
+          .replace(/[^0-9]/g, "")
+          .slice(0, 11);
+    }
   );
 }
 
@@ -1233,7 +1265,7 @@ function setFieldError(
   if (row) {
     row.classList.toggle(
       "invalid",
-      hasError
+      Boolean(hasError)
     );
   }
 }
@@ -1245,64 +1277,41 @@ function setFieldError(
 function validateCheckoutForm() {
   let valid = true;
 
-  const nameField =
-    document.getElementById(
-      "customerName"
-    );
-
-  const phoneField =
-    document.getElementById(
-      "customerPhone"
-    );
-
-  const addressField =
-    document.getElementById(
-      "customerAddress"
-    );
-
-  const govField =
-    document.getElementById(
-      "customerGovernorate"
-    );
-
-  const cityField =
-    document.getElementById(
-      "customerCity"
-    );
-
-  const villageField =
-    document.getElementById(
-      "customerVillage"
-    );
-
-  if (
-    !nameField ||
-    !phoneField ||
-    !addressField ||
-    !govField ||
-    !cityField ||
-    !villageField
-  ) {
-    return false;
-  }
-
   const name =
-    nameField.value.trim();
+    document
+      .getElementById(
+        "customerName"
+      )
+      ?.value.trim() || "";
 
   const phone =
-    phoneField.value.trim();
+    document
+      .getElementById(
+        "customerPhone"
+      )
+      ?.value.trim() || "";
 
   const address =
-    addressField.value.trim();
+    document
+      .getElementById(
+        "customerAddress"
+      )
+      ?.value.trim() || "";
 
   const gov =
-    govField.value;
+    document.getElementById(
+      "customerGovernorate"
+    )?.value || "";
 
   const city =
-    cityField.value;
+    document.getElementById(
+      "customerCity"
+    )?.value || "";
 
   const village =
-    villageField.value;
+    document.getElementById(
+      "customerVillage"
+    )?.value || "";
 
   setFieldError(
     "customerName",
@@ -1314,9 +1323,7 @@ function validateCheckoutForm() {
   }
 
   const phoneValid =
-    validateEgyptianPhone(
-      phone
-    );
+    validateEgyptianPhone(phone);
 
   setFieldError(
     "customerPhone",
@@ -1332,37 +1339,50 @@ function validateCheckoutForm() {
     !gov
   );
 
-  if (!gov) {
-    valid = false;
-  }
-
   setFieldError(
     "customerCity",
     !city
   );
-
-  if (!city) {
-    valid = false;
-  }
 
   setFieldError(
     "customerVillage",
     !village
   );
 
-  if (!village) {
-    valid = false;
-  }
-
   setFieldError(
     "customerAddress",
     !address
   );
 
-  if (!address) {
-    valid = false;
-  }
+  if (!gov) valid = false;
+  if (!city) valid = false;
+  if (!village) valid = false;
+  if (!address) valid = false;
 
+  selectedGovernorate =
+    document
+      .getElementById(
+        "customerGovernorate"
+      )
+      ?.selectedOptions[0]
+      ?.dataset.name ||
+    selectedGovernorate ||
+    "";
+
+  selectedCity =
+    document
+      .getElementById(
+        "customerCity"
+      )
+      ?.selectedOptions[0]
+      ?.dataset.name ||
+    selectedCity ||
+    "";
+
+  selectedVillage =
+    village;
+
+  /* الاستلام من المكتبة */
   if (
     selectedPaymentMethod ===
       "library_pickup" &&
@@ -1378,64 +1398,62 @@ function validateCheckoutForm() {
     valid = false;
   }
 
-  /* -----------------------------------------
-     التحقق من الدفع
-     COD لا يحتاج رقم عملية أو إيصال
-     ----------------------------------------- */
+  /* لازم يكون سعر الشحن معروف */
+  if (
+    currentShippingPrice === null
+  ) {
+    updateShippingCalculation();
+  }
 
-  const needsReceipt =
-    selectedPaymentMethod !==
-    "cod";
-
+  /* رقم العملية */
   const transactionField =
     document.getElementById(
       "transactionNumber"
     );
 
+  /*
+    في كل الحالات التي يوجد فيها مبلغ
+    مقدم يتم طلب رقم العملية والإيصال.
+  */
+  const transactionNumber =
+    transactionField
+      ?.value.trim() || "";
+
+  setFieldError(
+    "transactionNumber",
+    !transactionNumber
+  );
+
+  if (!transactionNumber) {
+    valid = false;
+  }
+
+  /* الإيصال */
   const receiptInput =
     document.getElementById(
       "paymentReceipt"
     );
 
-  if (needsReceipt) {
-    const transactionNumber =
-      transactionField
-        ?.value
-        .trim() || "";
-
-    setFieldError(
-      "transactionNumber",
-      !transactionNumber
+  const receiptRow =
+    receiptInput?.closest(
+      ".form-row"
     );
 
-    if (!transactionNumber) {
-      valid = false;
-    }
+  if (!receiptFile) {
+    receiptRow?.classList.add(
+      "invalid"
+    );
 
-    const receiptRow =
-      receiptInput?.closest(
-        ".form-row"
-      );
-
-    if (!receiptFile) {
-      receiptRow?.classList.add(
-        "invalid"
-      );
-
-      valid = false;
-    } else {
-      receiptRow?.classList.remove(
-        "invalid"
-      );
-    }
+    valid = false;
   } else {
-    setFieldError(
-      "transactionNumber",
-      false
+    receiptRow?.classList.remove(
+      "invalid"
     );
   }
 
-  if (cartQuantity() === 0) {
+  if (
+    getCartQuantitySafe() <= 0
+  ) {
     showToast(
       "السلة فارغة، لا يمكن إتمام الطلب",
       "error"
@@ -1448,13 +1466,17 @@ function validateCheckoutForm() {
 }
 
 /* =========================================================
-   رفع صورة الإيصال
+   رفع الإيصال
    ========================================================= */
 
 function handleReceiptFile(file) {
   if (!file) return;
 
-  if (!file.type.startsWith("image/")) {
+  if (
+    !file.type.startsWith(
+      "image/"
+    )
+  ) {
     showToast(
       "الملف يجب أن يكون صورة فقط",
       "error"
@@ -1477,26 +1499,21 @@ function handleReceiptFile(file) {
 
   receiptFile = file;
 
-  const reader =
-    new FileReader();
+  const preview =
+    document.getElementById(
+      "receiptPreview"
+    );
 
-  reader.onload = (event) => {
-    const preview =
-      document.getElementById(
-        "receiptPreview"
-      );
-
-    if (!preview) return;
-
+  if (preview) {
     preview.src =
-      event.target.result;
+      URL.createObjectURL(
+        file
+      );
 
     preview.classList.add(
       "show"
     );
-  };
-
-  reader.readAsDataURL(file);
+  }
 
   document
     .getElementById(
@@ -1506,11 +1523,12 @@ function handleReceiptFile(file) {
     ?.classList.remove(
       "invalid"
     );
-}
 
-/* =========================================================
-   رفع الإيصال إلى Supabase
-   ========================================================= */
+  showToast(
+    "تم اختيار صورة الإيصال بنجاح ✅",
+    "success"
+  );
+}
 
 async function uploadReceiptImage(
   orderNumber
@@ -1522,14 +1540,21 @@ async function uploadReceiptImage(
     };
   }
 
-  const ext =
-    receiptFile.name
-      .split(".")
-      .pop() ||
-    "jpg";
+  if (
+    !window.supabaseClient
+  ) {
+    throw new Error(
+      "Supabase غير متصل"
+    );
+  }
 
-  const safeExt =
-    ext
+  const ext =
+    (
+      receiptFile.name
+        .split(".")
+        .pop() ||
+      "jpg"
+    )
       .toLowerCase()
       .replace(
         /[^a-z0-9]/g,
@@ -1537,20 +1562,18 @@ async function uploadReceiptImage(
       ) || "jpg";
 
   const path =
-    `orders/${orderNumber}-${Date.now()}.${safeExt}`;
+    `orders/${orderNumber}-${Date.now()}.${ext}`;
 
   const config =
     window.MMK_CONFIG ||
-    window.MENA_CONFIG;
+    window.MENA_CONFIG ||
+    {};
 
   const bucket =
-    config?.RECEIPTS_BUCKET ||
+    config.RECEIPTS_BUCKET ||
     "payment-receipts";
 
-  const {
-    data,
-    error
-  } =
+  const { data, error } =
     await window.supabaseClient.storage
       .from(bucket)
       .upload(
@@ -1565,17 +1588,18 @@ async function uploadReceiptImage(
 
   if (error) {
     console.error(
-      "خطأ في رفع الإيصال:",
+      "Receipt upload error:",
       error
     );
 
     throw new Error(
-      "تعذر رفع صورة إيصال الدفع. حاول مرة أخرى."
+      "تعذر رفع صورة الإيصال: " +
+        error.message
     );
   }
 
   const {
-    data: publicUrlData
+    data: publicData
   } =
     window.supabaseClient.storage
       .from(bucket)
@@ -1583,20 +1607,19 @@ async function uploadReceiptImage(
 
   return {
     path:
-      data?.path ||
-      path,
+      data?.path || path,
 
     url:
-      publicUrlData?.publicUrl ||
+      publicData?.publicUrl ||
       null
   };
 }
 
 /* =========================================================
-   إنشاء رقم الطلب
+   توليد رقم الطلب
    ========================================================= */
 
-function generateOrderNumber() {
+function generateCheckoutOrderNumber() {
   const now =
     new Date();
 
@@ -1616,10 +1639,22 @@ function generateOrderNumber() {
   const random =
     Math.floor(
       1000 +
-      Math.random() * 9000
+        Math.random() *
+          9000
     );
 
   return `MMK-${year}${month}${day}-${random}`;
+}
+
+function getOrderNumber() {
+  if (
+    typeof generateOrderNumber ===
+    "function"
+  ) {
+    return generateOrderNumber();
+  }
+
+  return generateCheckoutOrderNumber();
 }
 
 /* =========================================================
@@ -1659,7 +1694,7 @@ async function submitOrder(e) {
         "status-box error";
 
       messageBox.textContent =
-        "الرجاء مراجعة الحقول المطلوبة وتصحيحها قبل المتابعة";
+        "الرجاء مراجعة البيانات المطلوبة وتصحيح الحقول الناقصة.";
 
       messageBox.scrollIntoView({
         behavior: "smooth",
@@ -1687,28 +1722,30 @@ async function submitOrder(e) {
 
   submitBtn.disabled = true;
 
-  submitBtn.innerHTML =
-    `<span class="spinner"></span>
-     جاري إرسال الطلب...`;
+  submitBtn.innerHTML = `
+    <span class="spinner"></span>
+    جاري إرسال الطلب...
+  `;
 
   try {
     const cart =
-      getCart();
+      getCheckoutCart();
 
     const subtotal =
-      Number(cartTotal()) || 0;
+      getCartTotalSafe();
 
-    const shipping =
+    let shipping =
+      currentShippingPrice || 0;
+
+    if (
       selectedPaymentMethod ===
       "library_pickup"
-        ? 0
-        : Number(
-            currentShippingPrice
-          ) || 0;
+    ) {
+      shipping = 0;
+    }
 
     const total =
-      subtotal +
-      shipping;
+      subtotal + shipping;
 
     let prepaidAmount = 0;
     let remainingAmount = 0;
@@ -1723,9 +1760,7 @@ async function submitOrder(e) {
       remainingAmount =
         total -
         prepaidAmount;
-    }
-
-    else if (
+    } else if (
       selectedPaymentMethod ===
       "library_pickup"
     ) {
@@ -1735,9 +1770,7 @@ async function submitOrder(e) {
       remainingAmount =
         total -
         prepaidAmount;
-    }
-
-    else {
+    } else {
       prepaidAmount =
         total;
 
@@ -1745,11 +1778,15 @@ async function submitOrder(e) {
     }
 
     const orderNumber =
-      generateOrderNumber();
+      getOrderNumber();
 
-    /* -----------------------------------------
-       بيانات الموقع
-       ----------------------------------------- */
+    /*
+      نرفع الإيصال أولاً
+    */
+    const receiptData =
+      await uploadReceiptImage(
+        orderNumber
+      );
 
     const govSelect =
       document.getElementById(
@@ -1761,15 +1798,11 @@ async function submitOrder(e) {
         "customerCity"
       );
 
-    const villageSelect =
-      document.getElementById(
-        "customerVillage"
-      );
-
     const govName =
       govSelect
         ?.selectedOptions[0]
         ?.dataset.name ||
+      selectedGovernorate ||
       govSelect?.value ||
       "";
 
@@ -1777,23 +1810,18 @@ async function submitOrder(e) {
       citySelect
         ?.selectedOptions[0]
         ?.dataset.name ||
+      selectedCity ||
       citySelect?.value ||
       "";
 
     const villageName =
-      villageSelect
-        ?.selectedOptions[0]
-        ?.dataset.name ||
-      villageSelect?.value ||
+      document.getElementById(
+        "customerVillage"
+      )?.value ||
+      selectedVillage ||
       "";
 
-    /* -----------------------------------------
-       بيانات المستخدم
-       ----------------------------------------- */
-
-    let customerUserId = null;
-    let customerEmail = null;
-
+    /* بيانات المستخدم */
     const {
       data: sessionData,
       error: sessionError
@@ -1813,91 +1841,57 @@ async function submitOrder(e) {
       );
     }
 
-    customerUserId =
+    const customerUserId =
       user.id;
 
-    customerEmail =
+    const customerEmail =
       user.email || null;
 
-    /* -----------------------------------------
-       رفع الإيصال
-       ----------------------------------------- */
+    /* بيانات العميل */
+    const customerName =
+      document
+        .getElementById(
+          "customerName"
+        )
+        ?.value.trim() || "";
 
-    let receiptData = {
-      path: null,
-      url: null
-    };
+    const customerPhone =
+      document
+        .getElementById(
+          "customerPhone"
+        )
+        ?.value.trim() || "";
 
-    if (
-      selectedPaymentMethod !==
-      "cod"
-    ) {
-      receiptData =
-        await uploadReceiptImage(
-          orderNumber
-        );
-    }
+    const customerAddress =
+      document
+        .getElementById(
+          "customerAddress"
+        )
+        ?.value.trim() || "";
 
-    /* -----------------------------------------
-       رقم العملية
-       ----------------------------------------- */
-
-    const transactionField =
-      document.getElementById(
-        "transactionNumber"
-      );
+    const customerNotes =
+      document
+        .getElementById(
+          "customerNotes"
+        )
+        ?.value.trim() || "";
 
     const transactionNumber =
-      selectedPaymentMethod ===
-      "cod"
-        ? null
-        : (
-            transactionField
-              ?.value
-              .trim() || null
-          );
+      document
+        .getElementById(
+          "transactionNumber"
+        )
+        ?.value.trim() || "";
 
-    /* -----------------------------------------
-       حالة الدفع
-       ----------------------------------------- */
-
-    let paymentStatus =
-      "pending_verification";
-
-    let customerPaymentState =
-      "awaiting_verification";
-
-    if (
-      selectedPaymentMethod ===
-      "cod"
-    ) {
-      paymentStatus =
-        "shipping_payment_required";
-
-      customerPaymentState =
-        "shipping_payment_required";
-    }
-
-    /* -----------------------------------------
-       بيانات الطلب
-       ----------------------------------------- */
-
+    /*
+      بيانات الطلب
+    */
     const orderPayload = {
       customer_name:
-        document
-          .getElementById(
-            "customerName"
-          )
-          .value
-          .trim(),
+        customerName,
 
       customer_phone:
-        document
-          .getElementById(
-            "customerPhone"
-          )
-          .value
-          .trim(),
+        customerPhone,
 
       customer_user_id:
         customerUserId,
@@ -1915,20 +1909,10 @@ async function submitOrder(e) {
         villageName,
 
       address:
-        document
-          .getElementById(
-            "customerAddress"
-          )
-          .value
-          .trim(),
+        customerAddress,
 
       notes:
-        document
-          .getElementById(
-            "customerNotes"
-          )
-          ?.value
-          .trim() || "",
+        customerNotes,
 
       payment_method:
         selectedPaymentMethod,
@@ -1967,7 +1951,7 @@ async function submitOrder(e) {
         receiptData.path,
 
       payment_status:
-        paymentStatus,
+        "pending_verification",
 
       order_status:
         "pending_review",
@@ -1985,25 +1969,21 @@ async function submitOrder(e) {
         remainingAmount,
 
       customer_payment_state:
-        customerPaymentState
+        "awaiting_verification"
     };
-
-    /* -----------------------------------------
-       اسم جدول الطلبات
-       ----------------------------------------- */
 
     const config =
       window.MMK_CONFIG ||
-      window.MENA_CONFIG;
+      window.MENA_CONFIG ||
+      {};
 
     const ordersTable =
-      config?.ORDERS_TABLE ||
+      config.ORDERS_TABLE ||
       "orders";
 
-    /* -----------------------------------------
-       حفظ الطلب
-       ----------------------------------------- */
-
+    /*
+      إدخال الطلب في Supabase
+    */
     const {
       data,
       error
@@ -2025,38 +2005,31 @@ async function submitOrder(e) {
       throw error;
     }
 
-    /* -----------------------------------------
-       حفظ بيانات آخر طلب
-       ----------------------------------------- */
-
-    if (config) {
-      if (
-        config.LAST_ORDER_ID_KEY &&
-        data?.id
-      ) {
-        localStorage.setItem(
-          config.LAST_ORDER_ID_KEY,
-          data.id
-        );
-      }
-
-      if (
-        config.LAST_ORDER_NUMBER_KEY
-      ) {
-        localStorage.setItem(
-          config.LAST_ORDER_NUMBER_KEY,
-          orderNumber
-        );
-      }
+    /*
+      حفظ آخر طلب
+    */
+    if (config.LAST_ORDER_ID_KEY) {
+      localStorage.setItem(
+        config.LAST_ORDER_ID_KEY,
+        data.id
+      );
     }
 
-    /* -----------------------------------------
-       حفظ احتياطي
-       ----------------------------------------- */
+    if (
+      config.LAST_ORDER_NUMBER_KEY
+    ) {
+      localStorage.setItem(
+        config.LAST_ORDER_NUMBER_KEY,
+        orderNumber
+      );
+    }
 
+    /*
+      احتياطي إضافي
+    */
     localStorage.setItem(
       "mmk_last_order_id",
-      data?.id || ""
+      data.id
     );
 
     localStorage.setItem(
@@ -2064,28 +2037,29 @@ async function submitOrder(e) {
       orderNumber
     );
 
-    /* -----------------------------------------
-       تفريغ السلة
-       ----------------------------------------- */
+    /*
+      تفريغ السلة
+    */
+    const cartKey =
+      typeof CART_KEY !==
+      "undefined"
+        ? CART_KEY
+        : "cart";
 
     localStorage.removeItem(
-      typeof CART_KEY !==
-        "undefined"
-        ? CART_KEY
-        : "cart"
+      cartKey
     );
 
-    /* -----------------------------------------
-       النجاح
-       ----------------------------------------- */
-
+    /*
+      الانتقال لصفحة النجاح
+    */
     window.location.href =
       "success.html";
 
-  } catch (err) {
+  } catch (error) {
     console.error(
-      "خطأ في إرسال الطلب:",
-      err
+      "Submit order error:",
+      error
     );
 
     if (messageBox) {
@@ -2096,8 +2070,8 @@ async function submitOrder(e) {
         "status-box error";
 
       messageBox.textContent =
-        err?.message ||
-        "حدث خطأ أثناء إرسال الطلب، الرجاء المحاولة مرة أخرى";
+        error?.message ||
+        "حدث خطأ أثناء إرسال الطلب، الرجاء المحاولة مرة أخرى.";
 
       messageBox.scrollIntoView({
         behavior: "smooth",
@@ -2105,7 +2079,8 @@ async function submitOrder(e) {
       });
     }
 
-    submitBtn.disabled = false;
+    submitBtn.disabled =
+      false;
 
     submitBtn.textContent =
       originalText;
@@ -2115,7 +2090,7 @@ async function submitOrder(e) {
 }
 
 /* =========================================================
-   اختيار طريقة الدفع
+   طرق الدفع
    ========================================================= */
 
 function setupPaymentMethodSelector() {
@@ -2139,7 +2114,7 @@ function setupPaymentMethodSelector() {
           )
         ) {
           showToast(
-            "الاستلام من المكتبة متاح فقط داخل الأقصر",
+            "الاستلام من المكتبة متاح فقط داخل الأقصر.",
             "error"
           );
 
@@ -2162,21 +2137,16 @@ function setupPaymentMethodSelector() {
           methodName;
 
         updateLibraryPickupVisibility();
-
         updateShippingCalculation();
-
         updatePaymentAmounts();
-
         updatePaymentNumbers();
       }
     );
   });
-
-  updatePaymentFieldsVisibility();
 }
 
 /* =========================================================
-   اختيار المحافظة / المركز / القرية
+   اختيار المحافظة والمركز والقرية
    ========================================================= */
 
 function setupLocationSelectors() {
@@ -2203,48 +2173,46 @@ function setupLocationSelectors() {
     return;
   }
 
-  /* -----------------------------------------
-     المحافظة
-     ----------------------------------------- */
-
+  /*
+    المحافظة
+  */
   govSelect.addEventListener(
     "change",
     () => {
-      const selected =
+      const option =
         govSelect.selectedOptions[0];
 
       selectedGovernorate =
-        selected?.dataset.name ||
-        "";
-
-      selectedGovernorateId =
-        govSelect.value ||
+        option?.dataset.name ||
         "";
 
       selectedCity = "";
-      selectedCityId = "";
       selectedVillage = "";
-
       currentShippingPrice =
         null;
 
+      citySelect.innerHTML = `
+        <option value="">
+          اختر المركز
+        </option>
+      `;
+
+      citySelect.disabled =
+        true;
+
+      villageSelect.innerHTML = `
+        <option value="">
+          اختر المركز أولاً
+        </option>
+      `;
+
+      villageSelect.disabled =
+        true;
+
       if (!govSelect.value) {
-        citySelect.innerHTML =
-          `<option value="">اختر المحافظة أولاً</option>`;
-
-        citySelect.disabled = true;
-
-        villageSelect.innerHTML =
-          `<option value="">اختر المركز أولاً</option>`;
-
-        villageSelect.disabled = true;
-
-        setLocationStatus(
-          ""
-        );
+        setLocationStatus("");
 
         updateLibraryPickupVisibility();
-
         updateShippingCalculation();
 
         return;
@@ -2264,49 +2232,40 @@ function setupLocationSelectors() {
           "info"
         );
       } else {
-        setLocationStatus(
-          ""
-        );
+        setLocationStatus("");
       }
 
       updateLibraryPickupVisibility();
-
       updateShippingCalculation();
     }
   );
 
-  /* -----------------------------------------
-     المركز
-     ----------------------------------------- */
-
+  /*
+    المركز
+  */
   citySelect.addEventListener(
     "change",
     () => {
-      const selected =
+      const option =
         citySelect.selectedOptions[0];
 
       selectedCity =
-        selected?.dataset.name ||
-        "";
-
-      selectedCityId =
-        citySelect.value ||
+        option?.dataset.name ||
         "";
 
       selectedVillage = "";
 
-      villageSelect.innerHTML =
-        `<option value="">جاري تحميل القرى...</option>`;
+      villageSelect.innerHTML = `
+        <option value="">
+          اختر القرية / الحي
+        </option>
+      `;
 
       villageSelect.disabled =
         true;
 
       if (!citySelect.value) {
-        villageSelect.innerHTML =
-          `<option value="">اختر المركز أولاً</option>`;
-
         updateShippingCalculation();
-
         return;
       }
 
@@ -2318,18 +2277,13 @@ function setupLocationSelectors() {
     }
   );
 
-  /* -----------------------------------------
-     القرية
-     ----------------------------------------- */
-
+  /*
+    القرية
+  */
   villageSelect.addEventListener(
     "change",
     () => {
-      const selected =
-        villageSelect.selectedOptions[0];
-
       selectedVillage =
-        selected?.dataset.name ||
         villageSelect.value ||
         "";
 
@@ -2339,7 +2293,7 @@ function setupLocationSelectors() {
 }
 
 /* =========================================================
-   رفع صورة الإيصال
+   رفع الإيصال
    ========================================================= */
 
 function setupReceiptUpload() {
@@ -2353,10 +2307,7 @@ function setupReceiptUpload() {
       "paymentReceipt"
     );
 
-  if (
-    !uploadBox ||
-    !fileInput
-  ) {
+  if (!uploadBox || !fileInput) {
     return;
   }
 
@@ -2371,7 +2322,7 @@ function setupReceiptUpload() {
     "change",
     (event) => {
       handleReceiptFile(
-        event.target.files[0]
+        event.target.files?.[0]
       );
     }
   );
@@ -2405,70 +2356,38 @@ function setupReceiptUpload() {
         "drag-active"
       );
 
-      if (
+      const file =
         event.dataTransfer
-          .files[0]
-      ) {
-        handleReceiptFile(
-          event.dataTransfer.files[0]
-        );
+          ?.files?.[0];
+
+      if (file) {
+        handleReceiptFile(file);
       }
     }
   );
 }
 
 /* =========================================================
-   الهاتف
-   ========================================================= */
-
-function setupPhoneMask() {
-  const phoneInput =
-    document.getElementById(
-      "customerPhone"
-    );
-
-  if (!phoneInput) return;
-
-  phoneInput.addEventListener(
-    "input",
-    () => {
-      phoneInput.value =
-        phoneInput.value
-          .replace(
-            /[^0-9]/g,
-            ""
-          )
-          .slice(0, 11);
-    }
-  );
-}
-
-/* =========================================================
-   تعبئة بيانات العميل
+   تعبئة بيانات العميل من الحساب
    ========================================================= */
 
 async function prefillFromCustomerSession() {
-  if (!window.supabaseClient) {
+  if (
+    !window.supabaseClient
+  ) {
     return;
   }
 
   try {
-    const {
-      data,
-      error
-    } =
+    const { data } =
       await window.supabaseClient.auth.getSession();
-
-    if (error) {
-      return;
-    }
 
     const user =
       data?.session?.user;
 
     if (!user) return;
 
-    const meta =
+    const metadata =
       user.user_metadata ||
       {};
 
@@ -2484,51 +2403,70 @@ async function prefillFromCustomerSession() {
 
     if (
       nameField &&
-      !nameField.value &&
-      meta.full_name
+      !nameField.value
     ) {
-      nameField.value =
-        meta.full_name;
+      const name =
+        metadata.full_name ||
+        metadata.name ||
+        "";
+
+      if (name) {
+        nameField.value =
+          name;
+      }
     }
 
     if (
       phoneField &&
-      !phoneField.value &&
-      meta.phone
+      !phoneField.value
     ) {
-      phoneField.value =
-        meta.phone;
-    }
+      const phone =
+        metadata.phone ||
+        "";
 
+      if (phone) {
+        phoneField.value =
+          phone
+            .replace(
+              /[^0-9]/g,
+              ""
+            )
+            .slice(0, 11);
+      }
+    }
   } catch (error) {
     console.warn(
-      "تعذر تعبئة بيانات العميل تلقائيًا:",
+      "Prefill error:",
       error
     );
   }
 }
 
 /* =========================================================
-   بدء الصفحة
+   بداية الصفحة
    ========================================================= */
 
 document.addEventListener(
   "DOMContentLoaded",
   async () => {
-    const isLoggedIn =
+    /*
+      التأكد من تسجيل الدخول
+    */
+    const loggedIn =
       await requireCustomerLogin();
 
-    if (!isLoggedIn) {
+    if (!loggedIn) {
       return;
     }
 
+    /*
+      التأكد أن السلة ليست فارغة
+    */
     if (
-      typeof cartQuantity ===
-        "function" &&
-      cartQuantity() === 0
+      getCartQuantitySafe() <= 0
     ) {
       showToast(
-        "سلتك فارغة، الرجاء إضافة منتجات أولاً",
+        "سلتك فارغة، الرجاء إضافة منتجات أولاً.",
         "error"
       );
 
@@ -2540,6 +2478,9 @@ document.addEventListener(
       return;
     }
 
+    /*
+      تشغيل الصفحة
+    */
     renderCheckoutSummary();
 
     setupLocationSelectors();
@@ -2556,21 +2497,43 @@ document.addEventListener(
 
     updatePaymentAmounts();
 
-    prefillFromCustomerSession();
+    /*
+      تحميل المحافظات والمراكز والقرى
+    */
+    await loadLocationData();
 
-    const checkoutForm =
+    /*
+      تعبئة بيانات العميل
+    */
+    await prefillFromCustomerSession();
+
+    /*
+      ربط الفورم
+    */
+    const form =
       document.getElementById(
         "checkoutForm"
       );
 
-    if (checkoutForm) {
-      checkoutForm.addEventListener(
+    if (form) {
+      form.addEventListener(
         "submit",
         submitOrder
       );
     }
-
-    loadLocationData();
   }
 );
+
+/* =========================================================
+   تصدير بعض الدوال عند الحاجة
+   ========================================================= */
+
+window.MMCheckout = {
+  updateShippingCalculation,
+  updatePaymentAmounts,
+  updatePaymentNumbers,
+  renderCheckoutSummary,
+  getShippingPriceForGovernorate,
+  isLuxorGovernorate
+};
 
