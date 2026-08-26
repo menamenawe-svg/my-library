@@ -584,6 +584,31 @@ function buyNow(
   );
 }
 
+/* =========================================================
+   PRODUCT DETAILS
+   ========================================================= */
+
+function openProductDetails(
+  productId
+) {
+
+  if (
+    productId ===
+      undefined ||
+    productId ===
+      null ||
+    productId ===
+      ""
+  ) {
+    return;
+  }
+
+  window.location.href =
+    `product.html?id=${encodeURIComponent(
+      String(productId)
+    )}`;
+}
+
 function removeFromCart(
   productId
 ) {
@@ -1278,6 +1303,15 @@ function renderProductsGrid() {
                   product.category
                 )
               )}"
+              onclick="
+                openProductDetails(
+                  '${escapeHTML(
+                    String(
+                      product.id
+                    )
+                  )}'
+                )
+              "
             >
 
               <img
@@ -1335,6 +1369,7 @@ function renderProductsGrid() {
                           : ""
                       }
                       onclick="
+                        event.stopPropagation();
                         addToCartById(
                           '${escapeHTML(
                             String(
@@ -1356,6 +1391,7 @@ function renderProductsGrid() {
                           : ""
                       }
                       onclick="
+                        event.stopPropagation();
                         buyNow(
                           '${escapeHTML(
                             String(
