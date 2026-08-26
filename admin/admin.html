@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>MMK Admin | لوحة التحكم</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap"
+    rel="stylesheet"
+  >
+
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+
+<body>
+
+  <!-- =====================================================
+       ADMIN NAVBAR
+  ====================================================== -->
+
+  <header class="admin-navbar">
+    <div class="admin-navbar-inner">
+
+      <div class="admin-brand">
+
+        <a
+          href="../index.html"
+          class="admin-logo"
+          aria-label="MMK Store"
+        >
+          🛍️ <strong>MMK</strong>
+        </a>
+
+        <span class="admin-navbar-title">
+          لوحة التحكم
+        </span>
+
+      </div>
+
+      <div class="admin-navbar-actions">
+
+        <a
+          href="../index.html"
+          target="_blank"
+          class="admin-store-link"
+        >
+          🛒 فتح المتجر
+        </a>
+
+        <button
+          type="button"
+          class="admin-logout-btn"
+          id="logoutButton"
+        >
+          🚪 تسجيل الخروج
+        </button>
+
+      </div>
+
+    </div>
+  </header>
+
+
+  <!-- =====================================================
+       MAIN
+  ====================================================== -->
+
+  <main class="admin-main">
+
+    <div class="admin-container">
+
+      <!-- =================================================
+           PAGE HEADER
+      ================================================== -->
+
+      <section class="admin-page-header">
+
+        <div>
+
+          <span class="admin-eyebrow">
+            MMK Store
+          </span>
+
+          <h1>
+            لوحة التحكم
+          </h1>
+
+          <p>
+            إدارة المنتجات والطلبات
+          </p>
+
+        </div>
+
+      </section>
+
+
+      <!-- =================================================
+           ADMIN MESSAGE
+      ================================================== -->
+
+      <div
+        id="adminMessage"
+        class="status-box success admin-message-hidden"
+        role="alert"
+        aria-live="polite"
+      ></div>
+
+
+      <!-- =================================================
+           TABS
+      ================================================== -->
+
+      <div class="admin-tabs">
+
+        <button
+          type="button"
+          class="admin-tab active"
+          data-tab="products"
+        >
+          🛍️ المنتجات
+        </button>
+
+        <button
+          type="button"
+          class="admin-tab"
+          data-tab="orders"
+        >
+          📦 الطلبات
+        </button>
+
+      </div>
+
+
+      <!-- =================================================
+           PRODUCTS TAB
+      ================================================== -->
+
+      <section
+        id="tabProducts"
+        class="admin-tab-panel"
+      >
+
+        <div class="admin-panel-header">
+
+          <div>
+
+            <span class="admin-section-label">
+              Products
+            </span>
+
+            <h2>
+              إدارة المنتجات
+            </h2>
+
+          </div>
+
+          <button
+            type="button"
+            class="btn btn-primary"
+            id="addProductButton"
+          >
+            ➕ إضافة منتج
+          </button>
+
+        </div>
+
+
+        <div
+          id="adminProducts"
+          class="admin-products-grid"
+        >
+
+          <div class="page-loading">
+            جاري تحميل المنتجات...
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- =================================================
+           ORDERS TAB
+      ================================================== -->
+
+      <section
+        id="tabOrders"
+        class="admin-tab-panel admin-orders-tab-hidden"
+      >
+
+        <div class="admin-panel-header">
+
+          <div>
+
+            <span class="admin-section-label">
+              Orders
+            </span>
+
+            <h2>
+              إدارة الطلبات
+            </h2>
+
+          </div>
+
+        </div>
+
+
+        <div
+          id="adminOrders"
+          class="admin-orders-list"
+        >
+
+          <div class="page-loading">
+            جاري تحميل الطلبات...
+          </div>
+
+        </div>
+
+      </section>
+
+    </div>
+
+  </main>
+
+
+  <!-- =====================================================
+       PRODUCT FORM MODAL
+  ====================================================== -->
+
+  <div
+    id="productFormBox"
+    class="modal-overlay product-modal-hidden"
+  >
+
+    <div
+      class="modal-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="productFormTitle"
+    >
+
+      <div class="modal-header">
+
+        <div>
+
+          <span class="admin-section-label">
+            Product
+          </span>
+
+          <h3 id="productFormTitle">
+            إضافة منتج جديد
+          </h3>
+
+        </div>
+
+        <button
+          type="button"
+          class="modal-close"
+          id="productFormClose"
+          aria-label="إغلاق نافذة المنتج"
+          title="إغلاق"
+        >
+          ✕
+        </button>
+
+      </div>
+
+
+      <!-- =================================================
+           PRODUCT FORM
+      ================================================== -->
+
+      <form
+        id="productForm"
+        class="product-admin-form"
+      >
+
+        <input
+          type="hidden"
+          id="productId"
+          name="productId"
+        >
+
+
+        <!-- NAME + PRICE -->
+
+        <div class="form-grid-2">
+
+          <div class="form-row">
+
+            <label for="productName">
+              اسم المنتج
+              <span class="req">*</span>
+            </label>
+
+            <input
+              type="text"
+              id="productName"
+              name="productName"
+              required
+              placeholder="اسم المنتج"
+              autocomplete="off"
+            >
+
+          </div>
+
+
+          <div class="form-row">
+
+            <label for="productPrice">
+              السعر
+              <span class="req">*</span>
+            </label>
+
+            <input
+              type="number"
+              id="productPrice"
+              name="productPrice"
+              min="0"
+              step="0.01"
+              required
+              placeholder="مثال: 150"
+              inputmode="decimal"
+            >
+
+          </div>
+
+        </div>
+
+
+        <!-- STOCK + CATEGORY -->
+
+        <div class="form-grid-2">
+
+          <div class="form-row">
+
+            <label for="productStock">
+              المخزون
+            </label>
+
+            <input
+              type="number"
+              id="productStock"
+              name="productStock"
+              min="0"
+              step="1"
+              placeholder="الكمية المتاحة"
+              inputmode="numeric"
+            >
+
+          </div>
+
+
+          <div class="form-row">
+
+            <label for="productCategory">
+              القسم
+              <span class="req">*</span>
+            </label>
+
+            <select
+              id="productCategory"
+              name="productCategory"
+              required
+              title="اختر قسم المنتج"
+            >
+
+              <option value="">
+                اختر القسم
+              </option>
+
+              <option value="cables">
+                كابلات
+              </option>
+
+              <option value="chargers">
+                شواحن
+              </option>
+
+              <option value="headphones">
+                هيدفون
+              </option>
+
+              <option value="handsfree">
+                هاند فري
+              </option>
+
+              <option value="school">
+                أدوات مدرسية
+              </option>
+
+              <option value="phone-accessories">
+                إكسسوارات هواتف
+              </option>
+
+              <option value="clothes">
+                ملابس
+              </option>
+
+              <option value="home">
+                أدوات منزلية
+              </option>
+
+              <option value="accessories">
+                إكسسوارات
+              </option>
+
+              <option value="airpods">
+                أيربودز
+              </option>
+
+            </select>
+
+          </div>
+
+        </div>
+
+
+        <!-- DESCRIPTION -->
+
+        <div class="form-row">
+
+          <label for="productDescription">
+            وصف المنتج
+          </label>
+
+          <textarea
+            id="productDescription"
+            name="productDescription"
+            rows="4"
+            placeholder="اكتب وصف المنتج..."
+          ></textarea>
+
+        </div>
+
+
+        <!-- IMAGE URL -->
+
+        <div class="form-row">
+
+          <label for="productImageUrl">
+            رابط صورة المنتج
+          </label>
+
+          <input
+            type="url"
+            id="productImageUrl"
+            name="productImageUrl"
+            placeholder="https://example.com/image.jpg"
+          >
+
+        </div>
+
+
+        <!-- IMAGE FILE -->
+
+        <div class="form-row">
+
+          <label for="productImage">
+            أو رفع صورة من الجهاز
+          </label>
+
+          <input
+            type="file"
+            id="productImage"
+            name="productImage"
+            accept="image/*"
+          >
+
+        </div>
+
+
+        <!-- FORM ACTIONS -->
+
+        <div class="form-actions">
+
+          <button
+            type="submit"
+            class="save-btn btn btn-primary"
+            id="saveProductButton"
+          >
+            💾 حفظ المنتج
+          </button>
+
+          <button
+            type="button"
+            class="cancel-btn btn btn-ghost"
+            id="cancelProductButton"
+          >
+            إلغاء
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+
+  <!-- =====================================================
+       SCRIPTS
+  ====================================================== -->
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase.js"></script>
+  <script src="admin.js"></script>
+
+</body>
+
+</html>
