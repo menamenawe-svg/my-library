@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MMK Store</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="promo-bar">
+  <div class="promo-track">
+    <span>🚚 توصيل لكل محافظات مصر</span>
+    <span>🎁 عروض وخصومات أسبوعية</span>
+    <span>🔒 دفع آمن 100%</span>
+    <span>⭐ خدمة عملاء متميزة</span>
+    <span>🚚 توصيل لكل محافظات مصر</span>
+    <span>🎁 عروض وخصومات أسبوعية</span>
+    <span>🔒 دفع آمن 100%</span>
+    <span>⭐ خدمة عملاء متميزة</span>
+  </div>
+</div>
+
+<header class="navbar">
+  <div class="container">
+<a href="index.html" class="logo">🛍️ <span>MMK Store</span></a>
+    <nav class="nav-links">
+      <a href="index.html">الرئيسية</a>
+      <a href="index.html#categories">الأقسام</a>
+      <a href="index.html#products">المنتجات</a>
+      <a href="cart.html">السلة</a>
+    </nav>
+    <div class="nav-actions">
+      <a href="login.html" class="account-link" id="accountLink">👤 تسجيل الدخول</a>
+      <a href="cart.html" class="cart-link" aria-label="السلة">
+        🛒
+        <span class="cart-badge" id="cartCount">0</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<section class="page-header">
+  <div class="floating-shapes"><span></span><span></span><span></span></div>
+  <div class="container">
+    <div class="breadcrumb">
+      <a href="index.html">الرئيسية</a>
+      <span class="sep">/</span>
+      <a href="cart.html">السلة</a>
+      <span class="sep">/</span>
+      <span class="current">إتمام الطلب</span>
+    </div>
+    <h1 class="page-title">إتمام الطلب</h1>
+
+    <div class="progress-steps">
+      <div class="progress-step active" id="stepData">
+        <div class="dot">1</div><span class="label">البيانات</span>
+      </div>
+      <div class="progress-line"></div>
+      <div class="progress-step" id="stepPayment">
+        <div class="dot">2</div><span class="label">الدفع</span>
+      </div>
+      <div class="progress-line"></div>
+      <div class="progress-step" id="stepReview">
+        <div class="dot">3</div><span class="label">المراجعة</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="page-body">
+  <div class="container">
+    <form id="checkoutForm" class="checkout-layout" novalidate>
+
+      <div>
+        <!-- بيانات العميل -->
+        <div class="form-card">
+          <h3><span class="badge-num">1</span> بيانات العميل والعنوان</h3>
+
+          <div class="form-grid-2">
+            <div class="form-row">
+              <label>الاسم بالكامل <span class="req">*</span></label>
+              <input type="text" id="customerName" name="customerName" placeholder="مثال: محمد أحمد" required>
+              <div class="field-error">الرجاء إدخال الاسم</div>
+            </div>
+            <div class="form-row">
+              <label>رقم الهاتف <span class="req">*</span></label>
+              <input type="tel" id="customerPhone" name="customerPhone" placeholder="01xxxxxxxxx" maxlength="11" required>
+              <div class="field-error">رقم هاتف مصري غير صحيح</div>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-row">
+              <label for="customerGovernorate">المحافظة <span class="req">*</span></label>
+              <select id="customerGovernorate" name="customerGovernorate" required>
+                <option value="">اختر المحافظة</option>
+              </select>
+              <div class="field-error">الرجاء اختيار المحافظة</div>
+            </div>
+            <div class="form-row">
+              <label for="customerCity">المركز / المنطقة <span class="req">*</span></label>
+              <select id="customerCity" name="customerCity" required disabled>
+                <option value="">اختر المحافظة أولاً</option>
+              </select>
+              <div class="field-error">الرجاء اختيار المركز</div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <label for="customerVillage">القرية / الحي <span class="req">*</span></label>
+            <select id="customerVillage" name="customerVillage" required disabled>
+              <option value="">اختر المركز أولاً</option>
+            </select>
+            <div class="field-error">الرجاء اختيار القرية أو الحي</div>
+          </div>
+
+          <div id="locationStatus" class="status-box info u-hidden"></div>
+
+          <div class="form-row">
+            <label>العنوان بالتفصيل <span class="req">*</span></label>
+            <textarea id="customerAddress" name="customerAddress" rows="3" placeholder="اسم الشارع، رقم العقار، علامة مميزة..." required></textarea>
+            <div class="field-error">الرجاء إدخال العنوان بالتفصيل</div>
+          </div>
+
+          <div class="form-row">
+            <label>ملاحظات (اختياري)</label>
+            <textarea id="customerNotes" name="customerNotes" rows="2" placeholder="أي ملاحظات إضافية على الطلب"></textarea>
+          </div>
+
+          <div id="shippingStatus" class="status-box info">
+            <span id="shippingPriceText">اختر المحافظة والمنطقة لحساب سعر الشحن</span>
+          </div>
+        </div>
+
+        <!-- الدفع -->
+        <div class="form-card">
+          <h3><span class="badge-num">2</span> طريقة الدفع</h3>
+<div class="payment-methods" id="paymentMethods">
+
+  <div
+    class="payment-method selected"
+    data-method="cod"
+    aria-label="الدفع عند الاستلام"
+  >
+    <div class="pm-icon">💵</div>
+    <div class="pm-name">الدفع عند الاستلام</div>
+  </div>
+
+  <div
+    class="payment-method"
+    data-method="orange_cash"
+    aria-label="الدفع باستخدام Orange Cash"
+  >
+    <div class="pm-icon">🟠</div>
+    <div class="pm-name">Orange Cash</div>
+  </div>
+
+  <div
+    class="payment-method"
+    data-method="instapay"
+    aria-label="الدفع باستخدام InstaPay"
+  >
+    <div class="pm-icon">🏦</div>
+    <div class="pm-name">InstaPay</div>
+  </div>
+
+  <div
+    class="payment-method"
+    data-method="library_pickup"
+    id="libraryPickupMethod"
+    aria-label="الاستلام من MMK Store"
+  >
+    <div class="pm-icon">🏪</div>
+    <div class="pm-name">الاستلام من المكتبة</div>
+  </div>
+
+</div>
+
+<div
+  id="paymentNumbers"
+  class="status-box info payment-numbers"
+  hidden
+  aria-live="polite"
+></div>
+
+<div class="payment-details-box">
+
+  <div class="payment-amounts">
+
+    <div class="amount-chip prepaid">
+      <div class="label">مطلوب دفعه الآن</div>
+
+      <div
+        class="value"
+        id="prepaidAmountText"
+      >
+        0 ج.م
+      </div>
+    </div>
+
+    <div class="amount-chip remaining">
+      <div class="label">المتبقي عند الاستلام</div>
+
+      <div
+        class="value"
+        id="remainingAmountText"
+      >
+        0 ج.م
+      </div>
+    </div>
+
+  </div>
+
+  <div
+    id="paymentInstructions"
+    class="status-box info"
+    aria-live="polite"
+  >
+    في حالة الدفع عند الاستلام، يتم دفع مصاريف الشحن مقدمًا فقط، ويتم دفع باقي قيمة الطلب عند الاستلام.
+  </div>
+
+  <div class="form-row transaction-row">
+
+    <label for="transactionNumber">
+      رقم عملية التحويل
+      <span class="req">*</span>
+    </label>
+
+    <input
+      type="text"
+      id="transactionNumber"
+      name="transactionNumber"
+      placeholder="رقم العملية / رقم الإيصال"
+      aria-label="رقم عملية التحويل"
+    >
+
+    <div class="field-error">
+      الرجاء إدخال رقم العملية
+    </div>
+
+  </div>
+
+  <div class="form-row">
+
+    <label for="paymentReceipt">
+      صورة إيصال الدفع
+      <span class="req">*</span>
+    </label>
+
+    <div
+      class="upload-box"
+      id="receiptUploadBox"
+    >
+      <div class="upload-icon">📎</div>
+
+      <p>
+        اضغط لرفع صورة الإيصال
+        (حد أقصى 5 ميجابايت)
+      </p>
+
+      <input
+        type="file"
+        id="paymentReceipt"
+        name="paymentReceipt"
+        accept="image/*"
+        class="u-hidden"
+        aria-label="اختيار صورة إيصال الدفع"
+      >
+    </div>
+
+    <img
+      id="receiptPreview"
+      alt="معاينة الإيصال"
+    >
+
+    <div class="field-error">
+      الرجاء رفع صورة الإيصال
+    </div>
+
+  </div>
+
+</div>
+
+            <div id="checkoutMessage" class="status-box error u-hidden"></div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="summary-card">
+        <h3><span class="badge-num">3</span> ملخص الطلب</h3>
+
+        <div class="checkout-summary-items" id="checkoutItems"></div>
+
+        <div class="summary-row">
+          <span>عدد المنتجات</span>
+          <span id="checkoutQuantity">0</span>
+        </div>
+        <div class="summary-row">
+          <span>قيمة المنتجات</span>
+          <span id="checkoutSubtotal">0 ج.م</span>
+        </div>
+        <div class="summary-row">
+          <span>الشحن</span>
+          <span id="checkoutShipping">—</span>
+        </div>
+        <div class="summary-row total">
+          <span>الإجمالي</span>
+          <span id="checkoutTotal">0 ج.م</span>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block btn-lg" id="confirmOrderBtn">
+          تأكيد الطلب
+        </button>
+      </aside>
+
+    </form>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container">
+ <div class="footer-bottom">
+  &copy; <span id="footerYear"></span> MMK Store. جميع الحقوق محفوظة.
+</div>
+  </div>
+</footer>
+
+<div id="toastContainer"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="script.js"></script>
+<script src="checkout.js"></script>
+<script>
+  document.getElementById("footerYear").textContent = new Date().getFullYear();
+  if (typeof updateAccountLink === "function") {
+    updateAccountLink();
+  }
+</script>
+</body>
+</html>

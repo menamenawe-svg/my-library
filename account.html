@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Account | MMK Library</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+<style>
+  .account-hero {
+    background: var(--grad-hero);
+    background-size: 200% 200%;
+    animation: heroDrift 18s ease-in-out infinite;
+    color: #fff;
+    padding: 50px 0;
+    text-align: center;
+  }
+  .account-hero h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
+  .account-hero p { color: #e2e8f0; font-size: 14px; }
+
+  .account-body { padding: 40px 0 80px; }
+  .account-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    margin-bottom: 22px;
+  }
+  .account-info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .account-info-row:last-child { border-bottom: none; }
+  .account-info-row .label { color: var(--text-muted); }
+  .account-info-row .value { font-weight: 700; color: var(--navy); }
+
+  .order-mini-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 16px 18px;
+    margin-bottom: 14px;
+    transition: box-shadow 0.2s;
+  }
+  .order-mini-card:hover { box-shadow: var(--shadow-md); }
+  .order-mini-header {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .order-mini-header .num { font-weight: 800; color: var(--navy); }
+  .order-mini-header .date { font-size: 12px; color: var(--text-muted); }
+  .order-mini-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<header class="navbar">
+  <div class="container">
+<a href="index.html" class="logo">📚 <span>MMK Store</span></a>
+    <nav class="nav-links">
+      <a href="index.html">الرئيسية</a>
+      <a href="index.html#categories">الأقسام</a>
+      <a href="index.html#products">المنتجات</a>
+      <a href="cart.html">السلة</a>
+    </nav>
+    <div class="nav-actions">
+      <a href="cart.html" class="cart-link" aria-label="السلة">
+        🛒
+        <span class="cart-badge" id="cartCount">0</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<section class="account-hero">
+  <div class="container">
+    <h1 id="welcomeName">مرحبًا بك 👋</h1>
+    <p id="welcomeEmail"></p>
+  </div>
+</section>
+
+<section class="account-body">
+  <div class="container u-max-w-720">
+
+    <div class="account-card">
+      <div class="u-row-between">
+        <h3 class="u-card-title">بياناتي</h3>
+        <button class="btn btn-ghost" id="logoutBtn">🚪 تسجيل الخروج</button>
+      </div>
+      <div class="account-info-row"><span class="label">الاسم</span><span class="value" id="infoName">—</span></div>
+      <div class="account-info-row"><span class="label">البريد الإلكتروني</span><span class="value" id="infoEmail">—</span></div>
+      <div class="account-info-row"><span class="label">الهاتف</span><span class="value" id="infoPhone">—</span></div>
+    </div>
+
+    <div class="account-card">
+      <h3 class="u-card-title-spaced">طلباتي</h3>
+      <div id="ordersList">
+        <div class="page-loading">جاري تحميل الطلبات...</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container">
+<div class="footer-bottom">&copy; <span id="footerYear"></span> MMK Store. جميع الحقوق محفوظة.</div>
+  </div>
+</footer>
+
+<div id="toastContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="script.js"></script>
+<script>
+document.getElementById("footerYear").textContent = new Date().getFullYear();
+
+const ORDER_STATUS_LABELS_ACCT = {
+  pending_review: "قيد المراجعة",
+  payment_verified: "تم تأكيد الدفع",
+  preparing: "جاري التجهيز",
+  shipped: "تم الشحن",
+  delivered: "تم التسليم",
+  cancelled: "ملغي",
+  rejected: "مرفوض",
+};
+
+async function initAccountPage() {
+  const { data } = await window.supabaseClient.auth.getSession();
+  const session = data?.session;
+
+  if (!session) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  const user = session.user;
+  const meta = user.user_metadata || {};
+
+  document.getElementById("welcomeName").textContent = `مرحبًا، ${meta.full_name || "عميلنا العزيز"} 👋`;
+  document.getElementById("welcomeEmail").textContent = user.email || "";
+  document.getElementById("infoName").textContent = meta.full_name || "—";
+  document.getElementById("infoEmail").textContent = user.email || "—";
+  document.getElementById("infoPhone").textContent = meta.phone || "—";
+
+  loadCustomerOrders(user.id);
+}
+
+async function loadCustomerOrders(userId) {
+  const container = document.getElementById("ordersList");
+  try {
+    const { data, error } = await window.supabaseClient
+      .from(window.MENA_CONFIG.ORDERS_TABLE)
+      .select("*")
+      .eq("customer_user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      container.innerHTML = `<div class="empty-state">لا توجد طلبات سابقة بعد</div>`;
+      return;
+    }
+
+    container.innerHTML = data.map((order) => {
+      const status = order.order_status || order.status || "pending_review";
+      const createdAt = order.created_at ? new Date(order.created_at).toLocaleDateString("ar-EG") : "—";
+      return `
+      <div class="order-mini-card">
+        <div class="order-mini-header">
+          <span class="num">🧾 ${escapeHTML(order.order_number || order.id)}</span>
+          <span class="date">${escapeHTML(createdAt)}</span>
+        </div>
+        <div class="order-mini-footer">
+          <span class="status-badge ${status}">${ORDER_STATUS_LABELS_ACCT[status] || status}</span>
+          <strong>${formatPrice(order.total)}</strong>
+        </div>
+      </div>`;
+    }).join("");
+  } catch (err) {
+    console.error("خطأ في تحميل الطلبات:", err);
+    container.innerHTML = `<div class="empty-state">تعذر تحميل الطلبات</div>`;
+  }
+}
+
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+  await window.supabaseClient.auth.signOut();
+  window.location.href = "index.html";
+});
+
+document.addEventListener("DOMContentLoaded", initAccountPage);
+</script>
+</body>
+</html>
