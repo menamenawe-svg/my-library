@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>تفاصيل المنتج - MMK Store</title>
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap"
+    rel="stylesheet"
+  >
+
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    .product-details-section {
+      padding: 50px 0 80px;
+    }
+
+    .product-details-card {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 45px;
+      background: #fff;
+      border-radius: 24px;
+      padding: 30px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, .07);
+      border: 1px solid #edf0f5;
+    }
+
+    .product-gallery {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 450px;
+      background: #f8fafc;
+      border-radius: 20px;
+      padding: 30px;
+    }
+
+    .product-gallery img {
+      width: 100%;
+      max-width: 450px;
+      max-height: 500px;
+      object-fit: contain;
+      border-radius: 16px;
+    }
+
+    .product-info {
+      padding: 15px 5px;
+    }
+
+    .product-category {
+      display: inline-block;
+      padding: 7px 14px;
+      border-radius: 20px;
+      background: #f1f5f9;
+      color: #64748b;
+      font-size: 13px;
+      margin-bottom: 15px;
+    }
+
+    .product-title {
+      font-size: 32px;
+      line-height: 1.5;
+      font-weight: 800;
+      color: #111827;
+      margin: 0 0 18px;
+    }
+
+    .product-price {
+      font-size: 28px;
+      font-weight: 800;
+      margin: 20px 0;
+    }
+
+    .product-description-title {
+      font-size: 19px;
+      font-weight: 800;
+      margin: 25px 0 10px;
+    }
+
+    .product-description {
+      color: #5f6b7a;
+      font-size: 16px;
+      line-height: 2;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .product-stock {
+      margin: 20px 0;
+      padding: 12px 15px;
+      border-radius: 12px;
+      background: #f0fdf4;
+      color: #15803d;
+      font-weight: 700;
+    }
+
+    .product-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 25px;
+    }
+
+    .quantity-box {
+      display: flex;
+      align-items: center;
+      border: 1px solid #dbe1e8;
+      border-radius: 12px;
+      overflow: hidden;
+      height: 52px;
+    }
+
+    .quantity-box button {
+      width: 45px;
+      height: 100%;
+      border: 0;
+      background: #f8fafc;
+      cursor: pointer;
+      font-size: 20px;
+    }
+
+    .quantity-box input {
+      width: 55px;
+      height: 100%;
+      border: 0;
+      outline: none;
+      text-align: center;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .add-product-btn {
+      flex: 1;
+      min-height: 52px;
+    }
+
+    .back-products {
+      margin-top: 25px;
+    }
+
+    .product-loading,
+    .product-error {
+      text-align: center;
+      padding: 80px 20px;
+      font-size: 18px;
+    }
+
+    .product-error {
+      color: #dc2626;
+    }
+
+    @media (max-width: 800px) {
+      .product-details-card {
+        grid-template-columns: 1fr;
+        gap: 25px;
+        padding: 18px;
+      }
+
+      .product-gallery {
+        min-height: 320px;
+      }
+
+      .product-title {
+        font-size: 25px;
+      }
+
+      .product-price {
+        font-size: 24px;
+      }
+
+      .product-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .quantity-box {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- شريط العروض -->
+  <div class="promo-bar">
+    <div class="promo-track">
+      <span>🚚 توصيل لكل محافظات مصر</span>
+      <span>🎁 عروض وخصومات أسبوعية</span>
+      <span>🔒 دفع آمن 100%</span>
+      <span>⭐ خدمة عملاء متميزة</span>
+
+      <span>🚚 توصيل لكل محافظات مصر</span>
+      <span>🎁 عروض وخصومات أسبوعية</span>
+      <span>🔒 دفع آمن 100%</span>
+      <span>⭐ خدمة عملاء متميزة</span>
+    </div>
+  </div>
+
+  <!-- Navbar -->
+  <header class="navbar">
+    <div class="container">
+
+      <a href="index.html" class="logo">
+        🛍️ <span>MMK Store</span>
+      </a>
+
+      <nav class="nav-links">
+        <a href="index.html">الرئيسية</a>
+        <a href="index.html#categories">الأقسام</a>
+        <a href="index.html#products">المنتجات</a>
+        <a href="cart.html">السلة</a>
+      </nav>
+
+      <div class="nav-actions">
+
+        <a
+          href="login.html"
+          class="account-link"
+          id="accountLink"
+        >
+          👤 تسجيل الدخول
+        </a>
+
+        <a
+          href="cart.html"
+          class="cart-link"
+          aria-label="السلة"
+        >
+          🛒
+          <span
+            class="cart-badge"
+            id="cartCount"
+          >
+            0
+          </span>
+        </a>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- عنوان الصفحة -->
+  <section class="page-header">
+
+    <div class="floating-shapes">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+
+    <div class="container">
+
+      <div class="breadcrumb">
+        <a href="index.html">الرئيسية</a>
+
+        <span class="sep">/</span>
+
+        <span class="current">
+          تفاصيل المنتج
+        </span>
+      </div>
+
+      <h1 class="page-title">
+        تفاصيل المنتج
+      </h1>
+
+    </div>
+
+  </section>
+
+  <!-- تفاصيل المنتج -->
+  <main class="product-details-section">
+
+    <div class="container">
+
+      <div
+        id="productLoading"
+        class="product-loading"
+      >
+        جاري تحميل المنتج...
+      </div>
+
+      <div
+        id="productError"
+        class="product-error"
+        hidden
+      >
+        تعذر العثور على المنتج.
+      </div>
+
+      <div
+        id="productDetails"
+        class="product-details-card"
+        hidden
+      >
+
+        <!-- الصورة -->
+        <div class="product-gallery">
+
+          <img
+            id="productImage"
+            src=""
+            alt="صورة المنتج"
+          >
+
+        </div>
+
+        <!-- المعلومات -->
+        <div class="product-info">
+
+          <div
+            id="productCategory"
+            class="product-category"
+          ></div>
+
+          <h1
+            id="productTitle"
+            class="product-title"
+          ></h1>
+
+          <div
+            id="productPrice"
+            class="product-price"
+          ></div>
+
+          <div
+            id="productStock"
+            class="product-stock"
+          >
+            متوفر
+          </div>
+
+          <h2 class="product-description-title">
+            وصف المنتج
+          </h2>
+
+          <div
+            id="productDescription"
+            class="product-description"
+          ></div>
+
+          <div class="product-actions">
+
+            <div class="quantity-box">
+
+              <button
+                type="button"
+                id="decreaseQuantity"
+              >
+                −
+              </button>
+<input
+  type="number"
+  id="productQuantity"
+  name="productQuantity"
+  value="1"
+  min="1"
+  max="99"
+  aria-label="كمية المنتج"
+>
+              <button
+                type="button"
+                id="increaseQuantity"
+              >
+                +
+              </button>
+
+            </div>
+
+            <button
+              type="button"
+              id="addProductBtn"
+              class="btn btn-primary add-product-btn"
+            >
+              🛒 إضافة للسلة
+            </button>
+
+          </div>
+
+          <div class="back-products">
+
+            <a
+              href="index.html#products"
+              class="btn btn-secondary"
+            >
+              ← العودة للمنتجات
+            </a>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+
+    <div class="container">
+
+      <div class="footer-bottom">
+        &copy;
+        <span id="footerYear"></span>
+        MMK Store. جميع الحقوق محفوظة.
+      </div>
+
+    </div>
+
+  </footer>
+
+  <div id="toastContainer"></div>
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script src="supabase.js"></script>
+  <script src="script.js"></script>
+  <script src="product.js"></script>
+
+  <script>
+    document.getElementById("footerYear").textContent =
+      new Date().getFullYear();
+
+    if (typeof updateAccountLink === "function") {
+      updateAccountLink();
+    }
+  </script>
+
+</body>
+</html>
