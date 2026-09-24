@@ -4,11 +4,10 @@
 
 (function initSupabaseClient() {
 
-  const SUPABASE_URL =
-    "https://ydguqnvkxceunhjptzpl.supabase.co";
-
-  const SUPABASE_ANON_KEY =
-    "sb_publishable_OXBoVuZZZn5IVjGNHOIGBA_0A95MfL_";
+const SUPABASE_URL =
+  "https://ydguqnvkxceunhjptzpl.supabase.co";
+const SUPABASE_ANON_KEY =
+  "sb_publishable_vcWvym2vc-Elec2C9M81rA_q9fdDwP6";
 
   if (
     typeof window.supabase === "undefined" ||
