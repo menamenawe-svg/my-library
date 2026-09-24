@@ -5,10 +5,10 @@
 (function initSupabaseClient() {
 
   const SUPABASE_URL =
-    "https://ydguqnvkxceunhjptzpl.supabase.co";
+    "https://fmporjxfmjacqpppzgbs.supabase.co";
 
   const SUPABASE_ANON_KEY =
-    "sb_publishable_vcWvym2vc-Elec2C9M81rA_q9fdDwP6";
+    "sb_publishable_f9EeMqMWY5NulG-9Oma3mQ_3xh6SHJj";
 
   /* -----------------------------------------
      منع إنشاء Client أكثر من مرة
