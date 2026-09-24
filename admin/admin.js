@@ -1226,10 +1226,12 @@ function createStatusOptions(
 /* =========================================================
    إنشاء كارت الطلب
    ========================================================= */
+/* =========================================================
+   إنشاء كارت الطلب — التصميم الجديد
+   ========================================================= */
 
-function createOrderHTML(
-  order
-) {
+function createOrderHTML(order) {
+
   const status =
     order.order_status ||
     order.status ||
@@ -1241,11 +1243,7 @@ function createOrderHTML(
 
   const createdAt =
     order.created_at
-      ? new Date(
-          order.created_at
-        ).toLocaleString(
-          "ar-EG"
-        )
+      ? new Date(order.created_at).toLocaleString("ar-EG")
       : "—";
 
   const customerName =
@@ -1266,21 +1264,19 @@ function createOrderHTML(
   const area =
     order.area ||
     order.city ||
-    "";
+    "—";
 
   const locality =
     order.locality ||
     order.village ||
-    "";
+    "—";
 
   const address =
     order.address ||
     "—";
 
   const paymentMethod =
-    getPaymentMethodText(
-      order.payment_method
-    );
+    getPaymentMethodText(order.payment_method);
 
   const shipping =
     order.shipping ??
@@ -1296,10 +1292,7 @@ function createOrderHTML(
   const total =
     order.total ??
     order.final_total ??
-    (
-      Number(subtotal) +
-      Number(shipping)
-    );
+    (Number(subtotal) + Number(shipping));
 
   const receiptUrl =
     order.receipt_url ||
@@ -1314,16 +1307,13 @@ function createOrderHTML(
   return `
     <div
       class="order-card"
-      data-order-id="${escapeHTML(
-        String(
-          order.id
-        )
-      )}"
+      data-order-id="${escapeHTML(String(order.id))}"
     >
 
+      <!-- رأس الطلب -->
       <div class="order-card-header">
 
-        <div>
+        <div class="order-main-title">
 
           <div class="order-num">
             🧾
@@ -1335,39 +1325,22 @@ function createOrderHTML(
           </div>
 
           <div class="order-date">
-            ${escapeHTML(
-              createdAt
-            )}
+            🕒 ${escapeHTML(createdAt)}
           </div>
 
         </div>
 
+        <div class="order-status-badges">
 
-        <div
-          class="order-status-badges"
-        >
-
-          <span
-            class="status-badge ${escapeHTML(
-              status
-            )}"
-          >
+          <span class="status-badge ${escapeHTML(status)}">
             ${escapeHTML(
-              getOrderStatusText(
-                status
-              )
+              getOrderStatusText(status)
             )}
           </span>
 
-          <span
-            class="status-badge ${escapeHTML(
-              paymentStatus
-            )}"
-          >
+          <span class="status-badge ${escapeHTML(paymentStatus)}">
             ${escapeHTML(
-              getPaymentStatusText(
-                paymentStatus
-              )
+              getPaymentStatusText(paymentStatus)
             )}
           </span>
 
@@ -1376,108 +1349,83 @@ function createOrderHTML(
       </div>
 
 
-      <div class="order-customer-info">
+      <!-- بيانات العميل -->
+      <div class="order-section">
 
-        <div>
-
-          <div class="item-label">
-            العميل
-          </div>
-
-          <div class="item-value">
-            ${escapeHTML(
-              customerName
-            )}
-          </div>
-
+        <div class="order-section-title">
+          👤 بيانات العميل
         </div>
 
+        <div class="order-info-grid">
 
-        <div>
-
-          <div class="item-label">
-            الهاتف
+          <div class="order-info-card">
+            <div class="order-info-icon">👤</div>
+            <div>
+              <div class="item-label">اسم العميل</div>
+              <div class="item-value">
+                ${escapeHTML(customerName)}
+              </div>
+            </div>
           </div>
 
-          <div class="item-value">
-            ${escapeHTML(
-              customerPhone
-            )}
+          <div class="order-info-card">
+            <div class="order-info-icon">📞</div>
+            <div>
+              <div class="item-label">رقم الهاتف</div>
+              <div class="item-value">
+                ${escapeHTML(customerPhone)}
+              </div>
+            </div>
           </div>
 
-        </div>
-
-
-        <div>
-
-          <div class="item-label">
-            المحافظة
+          <div class="order-info-card">
+            <div class="order-info-icon">📍</div>
+            <div>
+              <div class="item-label">المحافظة</div>
+              <div class="item-value">
+                ${escapeHTML(governorate)}
+              </div>
+            </div>
           </div>
 
-          <div class="item-value">
-            ${escapeHTML(
-              governorate
-            )}
+          <div class="order-info-card">
+            <div class="order-info-icon">🏘️</div>
+            <div>
+              <div class="item-label">المركز / المدينة</div>
+              <div class="item-value">
+                ${escapeHTML(area)}
+              </div>
+            </div>
           </div>
 
-        </div>
-
-
-        <div>
-
-          <div class="item-label">
-            المركز
+          <div class="order-info-card">
+            <div class="order-info-icon">🏠</div>
+            <div>
+              <div class="item-label">القرية / الحي</div>
+              <div class="item-value">
+                ${escapeHTML(locality)}
+              </div>
+            </div>
           </div>
 
-          <div class="item-value">
-            ${escapeHTML(
-              area
-            )}
+          <div class="order-info-card order-info-wide">
+            <div class="order-info-icon">📌</div>
+            <div>
+              <div class="item-label">العنوان بالتفصيل</div>
+              <div class="item-value">
+                ${escapeHTML(address)}
+              </div>
+            </div>
           </div>
 
-        </div>
-
-
-        <div>
-
-          <div class="item-label">
-            القرية / الحي
-          </div>
-
-          <div class="item-value">
-            ${escapeHTML(
-              locality
-            )}
-          </div>
-
-        </div>
-
-
-        <div>
-
-          <div class="item-label">
-            العنوان
-          </div>
-
-          <div class="item-value">
-            ${escapeHTML(
-              address
-            )}
-          </div>
-
-        </div>
-
-
-        <div>
-
-          <div class="item-label">
-            طريقة الدفع
-          </div>
-
-          <div class="item-value">
-            ${escapeHTML(
-              paymentMethod
-            )}
+          <div class="order-info-card">
+            <div class="order-info-icon">💳</div>
+            <div>
+              <div class="item-label">طريقة الدفع</div>
+              <div class="item-value">
+                ${escapeHTML(paymentMethod)}
+              </div>
+            </div>
           </div>
 
         </div>
@@ -1485,112 +1433,137 @@ function createOrderHTML(
       </div>
 
 
-      <div class="order-products-list">
+      <!-- المنتجات -->
+      <div class="order-section">
 
-        ${renderOrderProducts(
-          order.products ||
-          order.items ||
-          []
-        )}
+        <div class="order-section-title">
+          🛍️ منتجات الطلب
+        </div>
+
+        <div class="order-products-list">
+
+          ${renderOrderProducts(
+            order.products ||
+            order.items ||
+            []
+          )}
+
+        </div>
 
       </div>
 
 
-      <div class="order-card-footer">
+      <!-- المعلومات المالية -->
+      <div class="order-bottom-grid">
 
-        <div class="order-totals">
+        <div class="order-info-box money-box">
 
-          المنتجات:
-          ${formatPrice(
-            subtotal
-          )}
+          <div class="order-box-label">
+            💰 ملخص الحساب
+          </div>
 
-          +
-          الشحن:
-          ${formatPrice(
-            shipping
-          )}
+          <div class="order-total-row">
+            <span>قيمة المنتجات</span>
+            <span>
+              ${formatPrice(subtotal)}
+            </span>
+          </div>
 
-          &nbsp;=&nbsp;
+          <div class="order-total-row">
+            <span>الشحن</span>
+            <span>
+              ${formatPrice(shipping)}
+            </span>
+          </div>
 
-          <strong>
-            ${formatPrice(
-              total
-            )}
-          </strong>
+          <div class="order-total-final">
+            <span>الإجمالي النهائي</span>
+            <strong>
+              ${formatPrice(total)}
+            </strong>
+          </div>
+
+        </div>
 
 
-          ${
-            receiptUrl
-              ? `
-                <br>
+        ${
+          receiptUrl
+            ? `
+              <div class="order-info-box receipt-box">
+
+                <div class="order-box-label">
+                  🧾 إيصال الدفع
+                </div>
 
                 <a
                   class="receipt-link"
-                  href="${escapeHTML(
-                    receiptUrl
-                  )}"
+                  href="${escapeHTML(receiptUrl)}"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  📎 عرض إيصال الدفع
+                  <span>👁️</span>
+                  عرض إيصال الدفع
+                  <span>↗</span>
                 </a>
-              `
-              : ""
-          }
+
+              </div>
+            `
+            : ""
+        }
 
 
-          ${
-            transactionNumber
-              ? `
-                <br>
-                رقم العملية:
-                ${escapeHTML(
-                  transactionNumber
-                )}
-              `
-              : ""
-          }
+        ${
+          transactionNumber
+            ? `
+              <div class="order-info-box transaction-box">
 
-        </div>
+                <div class="order-box-label">
+                  🔢 رقم العملية
+                </div>
 
+                <div class="transaction-value">
+                  ${escapeHTML(transactionNumber)}
+                </div>
+
+              </div>
+            `
+            : ""
+        }
+
+      </div>
+
+
+      <!-- التحكم في الطلب -->
+      <div class="order-card-footer">
 
         <div class="order-status-controls">
 
           <select
+            class="order-status-select status-${escapeHTML(status)}"
             title="تغيير حالة الطلب"
             aria-label="تغيير حالة الطلب"
             onchange="
               updateOrderStatus(
-                '${escapeHTML(
-                  String(
-                    order.id
-                  )
-                )}',
+                '${escapeHTML(String(order.id))}',
                 this.value
               )
             "
           >
-            ${createStatusOptions(
-              status
-            )}
-          </select>
 
+            ${createStatusOptions(status)}
+
+          </select>
 
           <button
             type="button"
-            class="btn-delete"
+            class="btn-delete order-delete-btn"
             onclick="
               deleteOrder(
-                '${escapeHTML(
-                  String(
-                    order.id
-                  )
-                )}'
+                '${escapeHTML(String(order.id))}'
               )
             "
           >
-            🗑 حذف
+            🗑 حذف الطلب
           </button>
 
         </div>
@@ -1600,7 +1573,6 @@ function createOrderHTML(
     </div>
   `;
 }
-
 
 /* =========================================================
    تحديث حالة الطلب
