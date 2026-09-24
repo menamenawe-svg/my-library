@@ -1113,22 +1113,12 @@ function renderOrders() {
 /* =========================================================
    منتجات الطلب
    ========================================================= */
+function renderOrderProducts(products) {
+  let items = products;
 
-function renderOrderProducts(
-  products
-) {
-  let items =
-    products;
-
-  if (
-    typeof items ===
-    "string"
-  ) {
+  if (typeof items === "string") {
     try {
-      items =
-        JSON.parse(
-          items
-        );
+      items = JSON.parse(items);
     } catch {
       items = [];
     }
@@ -1138,13 +1128,12 @@ function renderOrderProducts(
     items = [];
   }
 
-  if (
-    items.length ===
-    0
-  ) {
+  if (items.length === 0) {
     return `
-      <div>
-        لا توجد منتجات مرفقة بالطلب
+      <div class="order-product-item">
+        <span class="order-product-name">
+          لا توجد منتجات مرفقة بالطلب
+        </span>
       </div>
     `;
   }
@@ -1153,21 +1142,17 @@ function renderOrderProducts(
     .map((item) => {
 
       const quantity =
-        Number(
-          item.quantity
-        ) || 1;
+        Number(item.quantity) || 1;
 
       const price =
-        Number(
-          item.price
-        ) || 0;
+        Number(item.price) || 0;
 
       return `
-        <div>
-          <span>
+        <div class="order-product-item">
+
+          <span class="order-product-name">
             ${escapeHTML(
-              item.name ||
-              "منتج"
+              item.name || "منتج"
             )}
             ×
             ${escapeHTML(
@@ -1175,18 +1160,17 @@ function renderOrderProducts(
             )}
           </span>
 
-          <span>
+          <span class="order-product-price">
             ${formatPrice(
-              price *
-                quantity
+              price * quantity
             )}
           </span>
+
         </div>
       `;
     })
     .join("");
 }
-
 
 /* =========================================================
    خيارات الحالات
