@@ -1051,15 +1051,22 @@ async function loadProducts() {
       "products";
 const {
   data,
-  error
+  error,
+  count
 } =
   await window.supabaseClient
     .from(table)
-    .select("*");
+    .select("*", {
+      count: "exact"
+    });
 
-    if (error) {
-      throw error;
-    }
+console.log("🔎 PRODUCTS DATA:", data);
+console.log("🔢 PRODUCTS COUNT:", count);
+console.log("❌ PRODUCTS ERROR:", error);
+
+if (error) {
+  throw error;
+}
 
     ALL_PRODUCTS =
       (data || []).map(
