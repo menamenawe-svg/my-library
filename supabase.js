@@ -9,7 +9,7 @@
     "https://fmporjxfmjacqpppzgbs.supabase.co";
 
   const SUPABASE_ANON_KEY =
-    "ضع هنا Publishable Key الخاص بمشروع fmporjxfmjacqpppzgbs";
+    "sb_publishable_f9EeMqMWY5NulG-9Oma3mQ_3xh6SHJj";
 
 
   /* -----------------------------------------
