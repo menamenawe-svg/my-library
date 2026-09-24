@@ -1049,21 +1049,13 @@ async function loadProducts() {
     const table =
       window.MENA_CONFIG?.PRODUCTS_TABLE ||
       "products";
-
-    const {
-      data,
-      error
-    } =
-      await window.supabaseClient
-        .from(table)
-        .select("*")
-        .order(
-          "created_at",
-          {
-            ascending:
-              false
-          }
-        );
+const {
+  data,
+  error
+} =
+  await window.supabaseClient
+    .from(table)
+    .select("*");
 
     if (error) {
       throw error;
