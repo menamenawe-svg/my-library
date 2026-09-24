@@ -8,8 +8,8 @@
 const SUPABASE_URL =
   "https://ydguqnvkxceunhjptzpl.supabase.co";
 
-  const SUPABASE_ANON_KEY =
-    "sb_publishable_OXBoVuZZZn5IVjGNHOIGBA_0A95MfL_";
+const SUPABASE_ANON_KEY =
+  "sb_publishable_OXBoVuZZZn5IVjGNHOIGBA_0A95MfL_";
 
   /* -----------------------------------------
      منع إنشاء Client أكثر من مرة
