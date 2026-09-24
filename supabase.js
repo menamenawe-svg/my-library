@@ -5,8 +5,8 @@
 
 (function initSupabaseClient() {
 
-  const SUPABASE_URL =
-    "https://fmporjxfmjacqpppzgbs.supabase.co";
+ const SUPABASE_URL =
+  "https://ydguqnvkxceunhjptzpl.supabase.co";
 
   const SUPABASE_ANON_KEY =
     "sb_publishable_f9EeMqMWY5NulG-9Oma3mQ_3xh6SHJj";
