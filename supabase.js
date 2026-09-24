@@ -5,7 +5,7 @@
 
 (function initSupabaseClient() {
 
- const SUPABASE_URL =
+const SUPABASE_URL =
   "https://ydguqnvkxceunhjptzpl.supabase.co";
 
   const SUPABASE_ANON_KEY =
